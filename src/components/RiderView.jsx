@@ -257,7 +257,10 @@ export function RiderView({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
               {myActiveOrders.map((ord) => {
                 const isMandadito = ord.order_type === 'mandadito';
-                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ord.delivery_address)}`;
+                const destinationParam = ord.delivery_coords
+                  ? `${ord.delivery_coords.lat},${ord.delivery_coords.lng}`
+                  : encodeURIComponent(ord.delivery_address);
+                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destinationParam}`;
 
                 return (
                   <div key={ord.id} className="glass-panel" style={{ padding: 18, background: 'var(--bg-surface)' }}>

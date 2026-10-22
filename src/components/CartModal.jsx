@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
+import { GpsLocationPicker } from './GpsLocationPicker';
 
 export function CartModal({ 
   cart, 
@@ -27,7 +28,8 @@ export function CartModal({
   const formatBs = (usd) => `Bs. ${(Number(usd || 0) * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formatUSD = (usd) => `$${Number(usd || 0).toFixed(2)}`;
 
-  const [deliveryAddress, setDeliveryAddress] = useState('Urb. Las Acacias, Calle 4, Casa #24 (portón verde)');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCoords, setDeliveryCoords] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('pago_movil');
   const [pagoMovilRef, setPagoMovilRef] = useState('');
   const [receiptUrl, setReceiptUrl] = useState(null);
@@ -77,6 +79,7 @@ export function CartModal({
       items: cart,
       subtotal,
       delivery_address: deliveryAddress,
+      delivery_coords: deliveryCoords,
       delivery_fee: deliveryFee,
       platform_fee: platformFee,
       total,
@@ -199,18 +202,17 @@ export function CartModal({
                   ))}
                 </div>
 
-                {/* Delivery Address */}
-                <div className="input-group">
-                  <label className="input-label">Dirección exacta de entrega</label>
-                  <input
-                    type="text"
-                    required
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="input-field"
-                    placeholder="Calle, urbanización, número de casa y referencia"
-                  />
-                </div>
+                {/* Delivery Address with High Precision GPS */}
+                <GpsLocationPicker
+                  label="Dirección exacta de entrega"
+                  value={deliveryAddress}
+                  onChange={setDeliveryAddress}
+                  coords={deliveryCoords}
+                  onCoordsChange={setDeliveryCoords}
+                  placeholder="Ej: Calle Principal con Av. Bolívar, Edificio Sol, Apto 3B"
+                  required
+                  helperText="Presiona el botón GPS para fijar tu ubicación y escribir tu dirección automáticamente"
+                />
 
                 {/* Payment method */}
                 <div className="input-group">

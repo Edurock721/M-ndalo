@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
+import { GpsLocationPicker } from './GpsLocationPicker';
 
 export function ClientView({ 
   merchants, 
@@ -49,6 +50,8 @@ export function ClientView({
     pago_movil_ref: ''
   });
   const [mandaditoReceiptPreview, setMandaditoReceiptPreview] = useState(null);
+  const [mandaditoPickupCoords, setMandaditoPickupCoords] = useState(null);
+  const [mandaditoDeliveryCoords, setMandaditoDeliveryCoords] = useState(null);
   const [isCompressingReceipt, setIsCompressingReceipt] = useState(false);
 
   // Categories
@@ -107,7 +110,9 @@ export function ClientView({
       rider_id: null,
       rider_name: null,
       pickup_address: mandaditoForm.pickup_address,
+      pickup_coords: mandaditoPickupCoords,
       delivery_address: mandaditoForm.delivery_address,
+      delivery_coords: mandaditoDeliveryCoords,
       task_description: mandaditoForm.task_description,
       purchase_budget: budget,
       subtotal: 0,
@@ -129,6 +134,8 @@ export function ClientView({
       payment_receipt_url: null,
       pago_movil_ref: ''
     });
+    setMandaditoPickupCoords(null);
+    setMandaditoDeliveryCoords(null);
     setMandaditoReceiptPreview(null);
   };
 
@@ -591,29 +598,27 @@ export function ClientView({
 
             <form onSubmit={handleCreateMandaditoSubmit}>
               <div className="modal-body" style={{ maxHeight: '68vh', overflowY: 'auto' }}>
-                <div className="input-group">
-                  <label className="input-label">Punto de Retiro (Origen)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej: MRW del Centro / Farmatodo / Casa tía María"
-                    value={mandaditoForm.pickup_address}
-                    onChange={(e) => setMandaditoForm({ ...mandaditoForm, pickup_address: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
+                <GpsLocationPicker
+                  label="Punto de Retiro (Origen)"
+                  placeholder="Ej: MRW del Centro / Farmatodo / Casa tía María"
+                  value={mandaditoForm.pickup_address}
+                  onChange={(val) => setMandaditoForm(prev => ({ ...prev, pickup_address: val }))}
+                  coords={mandaditoPickupCoords}
+                  onCoordsChange={setMandaditoPickupCoords}
+                  helperText="¿Estás en el sitio de retiro? Usa el GPS para fijar el origen automáticamente"
+                  required
+                />
 
-                <div className="input-group">
-                  <label className="input-label">Punto de Entrega (Destino)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej: Urb. Las Acacias, Calle 4, Casa #12 (portón blanco)"
-                    value={mandaditoForm.delivery_address}
-                    onChange={(e) => setMandaditoForm({ ...mandaditoForm, delivery_address: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
+                <GpsLocationPicker
+                  label="Punto de Entrega (Destino)"
+                  placeholder="Ej: Urb. Las Acacias, Calle 4, Casa #12 (portón blanco)"
+                  value={mandaditoForm.delivery_address}
+                  onChange={(val) => setMandaditoForm(prev => ({ ...prev, delivery_address: val }))}
+                  coords={mandaditoDeliveryCoords}
+                  onCoordsChange={setMandaditoDeliveryCoords}
+                  helperText="Usa el GPS para fijar tu dirección exacta de entrega con precisión satelital"
+                  required
+                />
 
                 <div className="input-group">
                   <label className="input-label">Descripción de la tarea / ¿Qué debemos hacer?</label>
