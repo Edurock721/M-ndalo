@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>MÁNDALO! - Delivery Local & Mandaditos</title>
+    
+    <!-- Meta tags for SEO & PWA -->
+    <meta name="description" content="PWA de compras en comercios locales y mandaditos particulares punto a punto con mensajería contextual y costo de infraestructura $0." />
+    <meta name="theme-color" content="#FF4B2B" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mándalo!" />
+
+    <!-- Favicon & PWA Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body style="background-color: #090D16; margin: 0; color: #FFFFFF;">
+    <div id="root">
+      <!-- Fallback Loading Splash (Instant feedback while JS mounts) -->
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-family: 'Outfit', sans-serif;">
+        <div style="width: 58px; height: 58px; border-radius: 16px; background: linear-gradient(135deg, #FF5E36, #FF2A54); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(255, 94, 54, 0.45);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h2 style="margin: 0; font-size: 24px; font-weight: 900; background: linear-gradient(135deg, #FFFFFF 30%, #FF8A65 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MÁNDALO!</h2>
+        <p style="margin: 0; font-size: 13px; color: #94A3B8;">Cargando delivery local y mandaditos...</p>
+      </div>
+    </div>
+    
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Clean up dev workers to prevent module cache interference
+      if ('serviceWorker' in navigator) {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (let reg of registrations) reg.unregister();
+          });
+        } else if (window.location.protocol.startsWith('http')) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW err:', err));
+          });
+        }
+      }
+    </script>
+  </body>
+</html>
