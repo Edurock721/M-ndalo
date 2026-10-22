@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mandaloGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5E36"/>
+      <stop offset="50%" stop-color="#FF2A54"/>
+      <stop offset="100%" stop-color="#7928CA"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE"/>
+      <stop offset="100%" stop-color="#4FACFE"/>
+    </linearGradient>
+    <filter id="dropGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#FF2A54" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="128" fill="url(#mandaloGrad)"/>
+  
+  <!-- Subtle inner border overlay -->
+  <rect x="8" y="8" width="496" height="496" rx="120" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="4"/>
+
+  <!-- Speed motion arcs -->
+  <path d="M90 280 Q 60 290 80 340" stroke="rgba(255,255,255,0.5)" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M120 220 Q 90 230 110 270" stroke="rgba(255,255,255,0.7)" stroke-width="12" stroke-linecap="round" fill="none"/>
+
+  <!-- Delivery Box with Wings / Lightning -->
+  <g filter="url(#dropGlow)">
+    <!-- Scooter / Lightning Delivery Icon -->
+    <path d="M190 140 L340 140 L280 250 L370 250 L200 400 L240 280 L170 280 Z" 
+          fill="#FFFFFF" 
+          stroke="rgba(255,255,255,0.9)" 
+          stroke-width="6" 
+          stroke-linejoin="round"/>
+  </g>
+
+  <!-- Exclamation mark dot -->
+  <circle cx="340" cy="380" r="18" fill="#FFD700" filter="url(#dropGlow)"/>
+
+  <!-- Subtle bottom text "M!" -->
+  <text x="256" y="475" text-anchor="middle" font-family="'Outfit', 'Inter', system-ui, sans-serif" font-weight="900" font-size="34" fill="#FFFFFF" letter-spacing="4">MÁNDALO!</text>
+</svg>
