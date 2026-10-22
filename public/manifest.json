@@ -2,8 +2,8 @@
   "name": "MÁNDALO! Delivery & Mandaditos",
   "short_name": "Mándalo!",
   "description": "Tu app local de delivery, compras en comercios y mandaditos particulares al instante.",
-  "start_url": "/",
-  "id": "/",
+  "start_url": "./",
+  "id": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0B0F19",
@@ -11,7 +11,7 @@
   "categories": ["food", "shopping", "lifestyle", "business"],
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -22,22 +22,22 @@
       "name": "Pedir Mandadito",
       "short_name": "Mandadito",
       "description": "Envía o busca algo en el pueblo al instante",
-      "url": "/?action=mandadito",
-      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+      "url": "./?action=mandadito",
+      "icons": [{ "src": "./icon.svg", "sizes": "192x192" }]
     },
     {
       "name": "Ver Comercios",
       "short_name": "Comercios",
       "description": "Catálogo de tiendas locales aliadas",
-      "url": "/?view=stores",
-      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+      "url": "./?view=stores",
+      "icons": [{ "src": "./icon.svg", "sizes": "192x192" }]
     },
     {
       "name": "Modo Repartidor",
       "short_name": "Rider",
       "description": "Ver pedidos y mandaditos disponibles",
-      "url": "/?role=rider",
-      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+      "url": "./?role=rider",
+      "icons": [{ "src": "./icon.svg", "sizes": "192x192" }]
     }
   ]
 }

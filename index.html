@@ -13,9 +13,9 @@
     <meta name="apple-mobile-web-app-title" content="Mándalo!" />
 
     <!-- Favicon & PWA Icons -->
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="manifest" href="./manifest.json" />
 
     <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,7 +34,7 @@
       </div>
     </div>
     
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="./src/main.jsx"></script>
     <script>
       // Clean up dev workers to prevent module cache interference
       if ('serviceWorker' in navigator) {
@@ -45,7 +45,7 @@
           });
         } else if (window.location.protocol.startsWith('http')) {
           window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW err:', err));
+            navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW err:', err));
           });
         }
       }
