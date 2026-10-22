@@ -106,7 +106,13 @@ class LocalStore {
       this.profiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILES)) || INITIAL_PROFILES;
       this.merchants = JSON.parse(localStorage.getItem(STORAGE_KEYS.MERCHANTS)) || INITIAL_MERCHANTS;
       this.products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS)) || INITIAL_PRODUCTS;
-      this.orders = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS)) || INITIAL_ORDERS;
+      let storedOrders = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS)) || [];
+      const existingIds = new Set(storedOrders.map(o => o.id));
+      const missingOrders = INITIAL_ORDERS.filter(o => !existingIds.has(o.id));
+      if (missingOrders.length > 0) {
+        storedOrders = [...storedOrders, ...missingOrders];
+      }
+      this.orders = storedOrders.length > 0 ? storedOrders : INITIAL_ORDERS;
       this.messages = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES)) || INITIAL_MESSAGES;
       this.currentUserId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID) || 'user-client-1';
     } catch (e) {

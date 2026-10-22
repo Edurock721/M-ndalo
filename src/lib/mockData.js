@@ -252,6 +252,9 @@ export const INITIAL_ORDERS = [
     payment_method: "pago_movil",
     payment_receipt_url: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
     pago_movil_ref: "REF-849201",
+    passenger_count: 0,
+    cargo_size: "small",
+    notes: "Entregar en puerta principal",
     created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString()
   },
   {
@@ -269,6 +272,9 @@ export const INITIAL_ORDERS = [
     pickup_address: "Agencia MRW Casco Central, taquilla 3 (Preguntar por guía #44921)",
     delivery_address: "Edificio Don Pedro, Piso 3, Apto 3-B",
     task_description: "Retirar encomienda pequeña pagada a nombre de Carlos Mendoza y traerla al apartamento.",
+    passenger_count: 0,
+    cargo_size: "small",
+    notes: "Sobre de manila ligero",
     purchase_budget: 0.00,
     subtotal: 0.00,
     delivery_fee: 2.00,
@@ -277,6 +283,60 @@ export const INITIAL_ORDERS = [
     payment_method: "cash_usd",
     payment_receipt_url: null,
     created_at: new Date(Date.now() - 1000 * 60 * 7).toISOString()
+  },
+  {
+    id: "ord-103",
+    order_type: "ride",
+    client_id: "user-client-1",
+    client_name: "Carlos Mendoza",
+    client_phone: "0414-5551234",
+    merchant_id: null,
+    merchant_name: null,
+    merchant_address: null,
+    rider_id: null, // Available in radar!
+    rider_name: null,
+    status: "pending",
+    pickup_address: "Plaza Bolívar, Casco Central frente a la Catedral",
+    delivery_address: "Centro Comercial Las Américas, Entrada Principal",
+    task_description: "Traslado de 2 pasajeros hacia el Centro Comercial",
+    passenger_count: 2,
+    cargo_size: "small",
+    notes: "Vamos 2 personas con morral ligero",
+    purchase_budget: 0.00,
+    subtotal: 0.00,
+    delivery_fee: 3.50,
+    platform_fee: 0.50,
+    total: 4.00,
+    payment_method: "cash_usd",
+    payment_receipt_url: null,
+    created_at: new Date(Date.now() - 1000 * 60 * 3).toISOString()
+  },
+  {
+    id: "ord-104",
+    order_type: "mandadito",
+    client_id: "user-client-1",
+    client_name: "Carlos Mendoza",
+    client_phone: "0414-5551234",
+    merchant_id: null,
+    merchant_name: null,
+    merchant_address: null,
+    rider_id: null, // Available in radar!
+    rider_name: null,
+    status: "pending",
+    pickup_address: "Distribuidora de Repuestos El Éxito, Galpón 4",
+    delivery_address: "Taller Mecánico Hermanos Díaz, Calle 8 con Av. 3",
+    task_description: "Traslado de 2 baterías pesadas y repuestos mecánicos en caja grande",
+    passenger_count: 0,
+    cargo_size: "heavy",
+    notes: "Caja pesada aprox 25kg, recomendado para carro o maletero espacioso",
+    purchase_budget: 0.00,
+    subtotal: 0.00,
+    delivery_fee: 6.00,
+    platform_fee: 0.50,
+    total: 6.50,
+    payment_method: "pago_movil",
+    payment_receipt_url: null,
+    created_at: new Date(Date.now() - 1000 * 60 * 1).toISOString()
   }
 ];
 
@@ -382,12 +442,12 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Órdenes unificadas: Compras en Comercios y Mandaditos
+-- 4. Órdenes unificadas: Compras en Comercios, Mandaditos y Carreras
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_type TEXT CHECK (order_type IN ('store_purchase', 'mandadito')) NOT NULL DEFAULT 'store_purchase',
+  order_type TEXT CHECK (order_type IN ('store_purchase', 'mandadito', 'ride')) NOT NULL DEFAULT 'store_purchase',
   client_id UUID REFERENCES profiles(id) NOT NULL,
-  merchant_id UUID REFERENCES merchants(id), -- NULL en mandaditos
+  merchant_id UUID REFERENCES merchants(id), -- NULL en mandaditos y carreras
   rider_id UUID REFERENCES profiles(id),     -- Asignado al aceptar
   status TEXT CHECK (status IN ('pending', 'accepted', 'preparing', 'ready_for_pickup', 'on_way', 'delivered', 'cancelled')) DEFAULT 'pending',
   
@@ -395,10 +455,15 @@ CREATE TABLE IF NOT EXISTS orders (
   items JSONB, 
   subtotal NUMERIC(10, 2) DEFAULT 0.00,
   
-  -- Campos exclusivos de Mandaditos
+  -- Campos de Mandaditos y Carreras
   pickup_address TEXT,
   task_description TEXT,
   purchase_budget NUMERIC(10, 2) DEFAULT 0.00,
+
+  -- Especificaciones de carga y pasajeros (Decisión del conductor)
+  passenger_count INT DEFAULT 1,
+  cargo_size TEXT CHECK (cargo_size IN ('small', 'medium', 'heavy')) DEFAULT 'small',
+  notes TEXT,
   
   -- Logística y cobros comunes
   delivery_address TEXT NOT NULL,
@@ -406,14 +471,17 @@ CREATE TABLE IF NOT EXISTS orders (
   platform_fee NUMERIC(10, 2) DEFAULT 0.50,
   payment_method TEXT CHECK (payment_method IN ('pago_movil', 'cash_usd', 'cash_bs')) NOT NULL,
   payment_receipt_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-
-  -- Validación de consistencia según el tipo de orden
-  CONSTRAINT check_order_integrity CHECK (
-    (order_type = 'store_purchase' AND merchant_id IS NOT NULL AND items IS NOT NULL) OR
-    (order_type = 'mandadito' AND pickup_address IS NOT NULL AND task_description IS NOT NULL)
-  )
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migración para bases de datos existentes:
+ALTER TABLE orders 
+  ADD COLUMN IF NOT EXISTS passenger_count INT DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS cargo_size TEXT CHECK (cargo_size IN ('small', 'medium', 'heavy')) DEFAULT 'small',
+  ADD COLUMN IF NOT EXISTS notes TEXT;
+
+GRANT ALL ON TABLE orders TO anon, authenticated;
+GRANT ALL ON TABLE profiles TO anon, authenticated;
 
 -- 5. Mensajería contextual por orden
 CREATE TABLE IF NOT EXISTS order_messages (

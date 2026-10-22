@@ -13,19 +13,37 @@ import { SUPABASE_SQL_SCHEMA } from '../lib/mockData';
 import { getSupabaseConfig, saveSupabaseConfig } from '../lib/supabase';
 import { soundManager } from '../lib/soundEffects';
 
+const MIGRATION_SQL = `-- Agregar especificaciones de carga y pasajeros a la tabla orders
+ALTER TABLE orders 
+  ADD COLUMN IF NOT EXISTS passenger_count INT DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS cargo_size TEXT CHECK (cargo_size IN ('small', 'medium', 'heavy')) DEFAULT 'small',
+  ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- Actualizar permisos para que anon y authenticated tengan acceso completo
+GRANT ALL ON TABLE orders TO anon, authenticated;
+GRANT ALL ON TABLE profiles TO anon, authenticated;`;
+
 export function SupabaseConfigModal({ onClose }) {
   const currentConfig = getSupabaseConfig();
   const [url, setUrl] = useState(currentConfig.url || '');
   const [anonKey, setAnonKey] = useState(currentConfig.anonKey || '');
   const [copied, setCopied] = useState(false);
+  const [copiedMigration, setCopiedMigration] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState('schema'); // 'schema' | 'connection'
+  const [activeTab, setActiveTab] = useState('schema'); // 'schema' | 'migration' | 'connection'
 
   const handleCopySchema = () => {
     navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
     setCopied(true);
     soundManager.playTap();
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCopyMigration = () => {
+    navigator.clipboard.writeText(MIGRATION_SQL);
+    setCopiedMigration(true);
+    soundManager.playTap();
+    setTimeout(() => setCopiedMigration(false), 2500);
   };
 
   const handleSaveConfig = (e) => {
@@ -86,6 +104,19 @@ export function SupabaseConfigModal({ onClose }) {
             }}
           >
             Script SQL Maestro
+          </button>
+          <button
+            onClick={() => setActiveTab('migration')}
+            style={{
+              padding: '12px 18px',
+              borderBottom: activeTab === 'migration' ? '2px solid var(--brand-orange)' : '2px solid transparent',
+              color: activeTab === 'migration' ? '#FFFFFF' : 'var(--text-muted)',
+              fontWeight: 700,
+              fontSize: 13,
+              background: 'none'
+            }}
+          >
+            Actualización Carga / Pasajeros (SQL)
           </button>
           <button
             onClick={() => setActiveTab('connection')}
@@ -160,6 +191,61 @@ export function SupabaseConfigModal({ onClose }) {
                   <li>Ve a <strong>SQL Editor</strong> y pega el código anterior.</li>
                   <li>Copia tu <code>Project URL</code> y <code>anon public key</code> de Settings &gt; API y pégalos en la pestaña &quot;Conectar Proyecto en Vivo&quot;.</li>
                 </ol>
+              </div>
+            </div>
+          ) : activeTab === 'migration' ? (
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+                gap: 12
+              }}>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  Ejecuta este comando en el <strong>SQL Editor</strong> de Supabase para agregar las columnas de pasajeros, tamaño de carga y permisos:
+                </p>
+                <button
+                  onClick={handleCopyMigration}
+                  className="btn-brand"
+                  style={{ padding: '8px 14px', fontSize: 12.5 }}
+                >
+                  {copiedMigration ? <Check size={14} /> : <Copy size={14} />}
+                  <span>{copiedMigration ? '¡Copiado!' : 'Copiar Migración'}</span>
+                </button>
+              </div>
+
+              <div style={{
+                position: 'relative',
+                background: '#070B12',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                padding: 18
+              }}>
+                <pre style={{
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  color: '#FBBF24',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {MIGRATION_SQL}
+                </pre>
+              </div>
+
+              <div style={{
+                marginTop: 16,
+                padding: 14,
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                fontSize: 12.5,
+                color: '#BFDBFE'
+              }}>
+                <strong>💡 ¿Para qué sirve esta migración?</strong>
+                <p style={{ marginTop: 6, lineHeight: 1.5 }}>
+                  Añade las columnas <code>passenger_count</code>, <code>cargo_size</code> y <code>notes</code> para que la bolsa de viajes y mandaditos permita al conductor ver exactamente el tipo de servicio y carga antes de aceptarlo.
+                </p>
               </div>
             </div>
           ) : (

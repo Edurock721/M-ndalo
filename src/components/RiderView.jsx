@@ -12,7 +12,12 @@ import {
   Store,
   PackageCheck,
   Zap,
-  Check
+  Check,
+  SlidersHorizontal,
+  AlertTriangle,
+  User,
+  Car,
+  Package
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundManager } from '../lib/soundEffects';
@@ -30,8 +35,30 @@ export function RiderView({
 
   const [activeTab, setActiveTab] = useState('radar'); // 'radar' | 'my_deliveries' | 'history'
 
+  // Driver Decision Filters: Quick toggles to filter pool by preference
+  const [showRides, setShowRides] = useState(true); // Ver traslados de personas (Carreras)
+  const [showPackages, setShowPackages] = useState(true); // Ver encomiendas / compras
+  const [showHeavy, setShowHeavy] = useState(true); // Ver cargas pesadas
+
   // Radar: available orders with no rider assigned yet
   const availableOrders = orders.filter((o) => !o.rider_id && o.status !== 'cancelled' && o.status !== 'delivered');
+
+  // Filtered available orders according to driver's active toggles
+  const filteredAvailableOrders = availableOrders.filter((ord) => {
+    const isRide = ord.order_type === 'ride';
+    const isHeavy = ord.cargo_size === 'heavy';
+    const isStandardPackage = !isRide && !isHeavy;
+
+    if (isRide && !showRides) return false;
+    if (isHeavy && !showHeavy) return false;
+    if (isStandardPackage && !showPackages) return false;
+
+    return true;
+  });
+
+  const ridesCount = availableOrders.filter(o => o.order_type === 'ride').length;
+  const packagesCount = availableOrders.filter(o => o.order_type !== 'ride' && o.cargo_size !== 'heavy').length;
+  const heavyCount = availableOrders.filter(o => o.cargo_size === 'heavy').length;
 
   // My active dispatches
   const myActiveOrders = orders.filter((o) => o.rider_id === currentUser.id && o.status !== 'delivered' && o.status !== 'cancelled');
@@ -149,32 +176,173 @@ export function RiderView({
           <div style={{ marginBottom: 14 }}>
             <h3 style={{ fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Navigation size={18} style={{ color: '#00F2FE' }} />
-              Envíos Disponibles en la Zona ({availableOrders.length})
+              Bolsa de Servicios en la Zona ({availableOrders.length})
             </h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              Toca &quot;Aceptar Despacho&quot; para asignarte la orden y comenzar la entrega
+              Elige con libertad según tu vehículo y disponibilidad. Tú decides qué servicio tomar.
             </p>
           </div>
 
-          {availableOrders.length === 0 ? (
+          {/* Quick Filter Toggles - Driver Decision Controls */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+            marginBottom: 16,
+            padding: '12px 14px',
+            borderRadius: 'var(--radius-lg)',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, color: 'var(--text-dim)', marginRight: 4 }}>
+              <SlidersHorizontal size={14} style={{ color: 'var(--brand-orange)' }} />
+              <span>FILTROS RÁPIDOS:</span>
+            </div>
+
+            {/* Toggle Carreras */}
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setShowRides(!showRides);
+              }}
+              style={{
+                cursor: 'pointer',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-full)',
+                border: showRides ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: showRides ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
+                color: showRides ? '#60A5FA' : 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                fontWeight: 700,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span>{showRides ? '☑' : '☐'}</span>
+              <User size={13} />
+              <span>Ver Carreras / Pasajeros ({ridesCount})</span>
+            </button>
+
+            {/* Toggle Encomiendas / Compras */}
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setShowPackages(!showPackages);
+              }}
+              style={{
+                cursor: 'pointer',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-full)',
+                border: showPackages ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: showPackages ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                color: showPackages ? '#34D399' : 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                fontWeight: 700,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span>{showPackages ? '☑' : '☐'}</span>
+              <Package size={13} />
+              <span>Ver Encomiendas / Compras ({packagesCount})</span>
+            </button>
+
+            {/* Toggle Cargas Pesadas */}
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setShowHeavy(!showHeavy);
+              }}
+              style={{
+                cursor: 'pointer',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-full)',
+                border: showHeavy ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: showHeavy ? 'rgba(245, 158, 11, 0.18)' : 'transparent',
+                color: showHeavy ? '#FBBF24' : 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                fontWeight: 700,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span>{showHeavy ? '☑' : '☐'}</span>
+              <AlertTriangle size={13} />
+              <span>Ver Cargas pesadas ({heavyCount})</span>
+            </button>
+          </div>
+
+          {filteredAvailableOrders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-dim)' }} className="glass-panel">
               <Bike size={44} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-              <p style={{ fontSize: 15 }}>No hay envíos pendientes por asignar en este momento.</p>
-              <p style={{ fontSize: 12 }}>El radar te alertará automáticamente con un sonido cuando un cliente ordene.</p>
+              <p style={{ fontSize: 15 }}>No hay servicios que coincidan con tus filtros activos.</p>
+              <p style={{ fontSize: 12 }}>Activa más filtros arriba o espera una nueva alerta sonora en la zona.</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-              {availableOrders.map((ord) => {
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16 }}>
+              {filteredAvailableOrders.map((ord) => {
+                const isRide = ord.order_type === 'ride';
                 const isMandadito = ord.order_type === 'mandadito';
+                const isHeavy = ord.cargo_size === 'heavy';
+                const destinationParam = ord.delivery_coords
+                  ? `${ord.delivery_coords.lat},${ord.delivery_coords.lng}`
+                  : encodeURIComponent(ord.delivery_address);
+                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destinationParam}`;
 
                 return (
                   <div key={ord.id} className="glass-panel" style={{ padding: 18, background: 'var(--bg-surface)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                      <span className={`badge ${isMandadito ? 'badge-mandadito' : 'badge-onway'}`}>
-                        {isMandadito ? 'MANDADITO EXPRESS' : 'COMPRA COMERCIO'}
-                      </span>
+                    {/* Header Badges */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        {/* Service Type Tag */}
+                        {isRide ? (
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60A5FA', border: '1px solid rgba(59, 130, 246, 0.4)', fontWeight: 800 }}>
+                            👤 Carrera / Pasajero
+                          </span>
+                        ) : isMandadito ? (
+                          <span className="badge badge-mandadito">
+                            📦 Mandadito Express
+                          </span>
+                        ) : (
+                          <span className="badge badge-onway">
+                            🛒 Compra Comercio
+                          </span>
+                        )}
+
+                        {/* Heavy Load Warning */}
+                        {isHeavy && (
+                          <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', border: '1px solid rgba(245, 158, 11, 0.4)', fontWeight: 800 }}>
+                            ⚠️ Carga pesada • Recomendado carro
+                          </span>
+                        )}
+
+                        {/* Light package note */}
+                        {!isHeavy && !isRide && (
+                          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', fontSize: 11 }}>
+                            📦 Ligero (Ideal moto)
+                          </span>
+                        )}
+
+                        {/* Passenger Count Badge */}
+                        {isRide && ord.passenger_count > 1 && (
+                          <span className="badge" style={{ background: 'rgba(147, 51, 234, 0.2)', color: '#C084FC', border: '1px solid rgba(147, 51, 234, 0.4)' }}>
+                            👥 {ord.passenger_count} Pasajeros
+                          </span>
+                        )}
+                      </div>
+
                       <div style={{ textAlign: 'right' }}>
-                        <strong style={{ fontSize: 16, color: '#10B981' }}>
+                        <strong style={{ fontSize: 17, color: '#10B981' }}>
                           +${ord.delivery_fee?.toFixed(2)}
                         </strong>
                         <div style={{ fontSize: 11.5, color: '#FBBF24', fontWeight: 700 }}>
@@ -185,20 +353,20 @@ export function RiderView({
 
                     {/* Route Details */}
                     <div style={{
-                      background: 'rgba(0,0,0,0.2)',
+                      background: 'rgba(0,0,0,0.25)',
                       padding: 12,
                       borderRadius: 'var(--radius-md)',
-                      marginBottom: 14,
+                      marginBottom: 12,
                       fontSize: 13
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-                        <Store size={15} style={{ color: 'var(--brand-orange)', marginTop: 2, flexShrink: 0 }} />
+                        <Store size={15} style={{ color: isRide ? '#60A5FA' : 'var(--brand-orange)', marginTop: 2, flexShrink: 0 }} />
                         <div>
                           <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>
-                            {isMandadito ? 'Retiro en:' : 'Comercio:'}
+                            {isRide ? 'Punto de recogida (Origen):' : isMandadito ? 'Retiro en:' : 'Comercio:'}
                           </span>
-                          <p style={{ fontWeight: 600 }}>{isMandadito ? ord.pickup_address : ord.merchant_name}</p>
-                          {!isMandadito && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ord.merchant_address}</span>}
+                          <p style={{ fontWeight: 600 }}>{isRide || isMandadito ? ord.pickup_address : ord.merchant_name}</p>
+                          {!isRide && !isMandadito && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ord.merchant_address}</span>}
                         </div>
                       </div>
 
@@ -206,17 +374,71 @@ export function RiderView({
                         <MapPin size={15} style={{ color: '#00F2FE', marginTop: 2, flexShrink: 0 }} />
                         <div>
                           <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>
-                            Entrega al cliente:
+                            {isRide ? 'Destino del viaje:' : 'Entrega al cliente:'}
                           </span>
                           <p style={{ fontWeight: 600 }}>{ord.delivery_address}</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Task description or items */}
-                    <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 14 }}>
-                      {isMandadito ? `Diligencia: ${ord.task_description}` : `Artículos: ${ord.items?.map(i => `${i.quantity}x ${i.name}`).join(', ')}`}
-                    </p>
+                    {/* Passenger & Task Description */}
+                    {isRide && (
+                      <p style={{ fontSize: 12.5, color: '#93C5FD', marginBottom: 8, fontWeight: 600 }}>
+                        👤 Pasajeros: <strong>{ord.passenger_count || 1}</strong> {ord.passenger_count > 1 ? '• Se recomienda vehículo 4 ruedas' : '• Apto mototaxi o carro'}
+                      </p>
+                    )}
+
+                    {ord.task_description && (
+                      <p style={{
+                        fontSize: 12.5,
+                        color: 'var(--text-main)',
+                        marginBottom: 8,
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        padding: '8px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontStyle: 'italic'
+                      }}>
+                        &quot;{ord.task_description}&quot;
+                      </p>
+                    )}
+
+                    {ord.notes && (
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+                        📝 Nota: {ord.notes}
+                      </p>
+                    )}
+
+                    {!isRide && ord.items && ord.items.length > 0 && (
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+                        Artículos: {ord.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                      </p>
+                    )}
+
+                    {/* GPS Navigation preview */}
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        padding: '7px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'rgba(56, 189, 248, 0.08)',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                        color: '#38BDF8',
+                        fontWeight: 600,
+                        fontSize: 12,
+                        textDecoration: 'none',
+                        marginBottom: 12
+                      }}
+                    >
+                      <Navigation size={13} />
+                      <span>Ver ruta exacta en GPS</span>
+                      <ExternalLink size={12} />
+                    </a>
 
                     <button
                       onClick={() => {
@@ -226,13 +448,18 @@ export function RiderView({
                       className="btn-brand"
                       style={{
                         width: '100%',
-                        background: 'linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%)',
-                        color: '#000000',
-                        fontWeight: 800
+                        background: isRide
+                          ? 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'
+                          : isHeavy
+                          ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                          : 'linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%)',
+                        color: isRide || isHeavy ? '#FFFFFF' : '#000000',
+                        fontWeight: 800,
+                        padding: '12px'
                       }}
                     >
                       <Zap size={16} />
-                      <span>Aceptar Despacho (+${ord.delivery_fee?.toFixed(2)} / {formatBs(ord.delivery_fee)})</span>
+                      <span>Tomar servicio (+${ord.delivery_fee?.toFixed(2)} / {formatBs(ord.delivery_fee)})</span>
                     </button>
                   </div>
                 );

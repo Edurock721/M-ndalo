@@ -15,7 +15,11 @@ import {
   Check, 
   DollarSign,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  User,
+  Users,
+  Car,
+  AlertTriangle
 } from 'lucide-react';
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
@@ -39,11 +43,15 @@ export function ClientView({
   const [showMandaditoModal, setShowMandaditoModal] = useState(false);
   const [itemNote, setItemNote] = useState({});
 
-  // Mandadito Form State
+  // Mandadito & Ride Form State
   const [mandaditoForm, setMandaditoForm] = useState({
+    order_type: 'mandadito', // 'mandadito' | 'ride'
+    cargo_size: 'small', // 'small' | 'heavy'
+    passenger_count: 1, // 1, 2, 3, 4
     pickup_address: '',
     delivery_address: '',
     task_description: '',
+    notes: '',
     purchase_budget: '0.00',
     payment_method: 'pago_movil',
     payment_receipt_url: null,
@@ -90,18 +98,32 @@ export function ClientView({
 
   const handleCreateMandaditoSubmit = (e) => {
     e.preventDefault();
-    if (!mandaditoForm.pickup_address.trim() || !mandaditoForm.delivery_address.trim() || !mandaditoForm.task_description.trim()) {
-      alert('Por favor completa las direcciones y la descripción del mandadito.');
+    const isRide = mandaditoForm.order_type === 'ride';
+    const isHeavy = mandaditoForm.cargo_size === 'heavy';
+
+    if (!mandaditoForm.pickup_address.trim() || !mandaditoForm.delivery_address.trim()) {
+      alert('Por favor completa las direcciones de origen y destino.');
       return;
     }
 
     const budget = parseFloat(mandaditoForm.purchase_budget) || 0;
-    const delivery_fee = 2.00;
+    let delivery_fee = 2.00;
+    if (isRide) {
+      delivery_fee = (mandaditoForm.passenger_count > 2) ? 3.50 : 2.50;
+    } else if (isHeavy) {
+      delivery_fee = 3.50;
+    }
     const platform_fee = 0.50;
-    const total = budget + delivery_fee + platform_fee;
+    const total = (isRide ? 0 : budget) + delivery_fee + platform_fee;
+
+    const taskDesc = mandaditoForm.task_description.trim() || (isRide 
+      ? `Carrera para ${mandaditoForm.passenger_count || 1} persona(s)`
+      : isHeavy 
+      ? 'Traslado de carga pesada / bultos' 
+      : 'Envío de encomienda ligera');
 
     onCreateOrder({
-      order_type: 'mandadito',
+      order_type: mandaditoForm.order_type,
       client_id: currentUser.id,
       client_name: currentUser.full_name,
       client_phone: currentUser.phone,
@@ -113,8 +135,11 @@ export function ClientView({
       pickup_coords: mandaditoPickupCoords,
       delivery_address: mandaditoForm.delivery_address,
       delivery_coords: mandaditoDeliveryCoords,
-      task_description: mandaditoForm.task_description,
-      purchase_budget: budget,
+      task_description: taskDesc,
+      passenger_count: isRide ? Number(mandaditoForm.passenger_count || 1) : 0,
+      cargo_size: isRide ? 'small' : (mandaditoForm.cargo_size || 'small'),
+      notes: mandaditoForm.notes || '',
+      purchase_budget: isRide ? 0 : budget,
       subtotal: 0,
       delivery_fee,
       platform_fee,
@@ -126,9 +151,13 @@ export function ClientView({
 
     setShowMandaditoModal(false);
     setMandaditoForm({
+      order_type: 'mandadito',
+      cargo_size: 'small',
+      passenger_count: 1,
       pickup_address: '',
       delivery_address: '',
       task_description: '',
+      notes: '',
       purchase_budget: '0.00',
       payment_method: 'pago_movil',
       payment_receipt_url: null,
@@ -179,6 +208,12 @@ export function ClientView({
             <button
               onClick={() => {
                 soundManager.playTap();
+                setMandaditoForm(prev => ({
+                  ...prev,
+                  order_type: 'mandadito',
+                  cargo_size: 'small',
+                  passenger_count: 0
+                }));
                 setShowMandaditoModal(true);
               }}
               style={{
@@ -194,7 +229,34 @@ export function ClientView({
               }}
             >
               <Bike size={18} />
-              <span>Pedir Mandadito Express</span>
+              <span>Pedir Mandadito / Carga</span>
+            </button>
+
+            <button
+              onClick={() => {
+                soundManager.playTap();
+                setMandaditoForm(prev => ({
+                  ...prev,
+                  order_type: 'ride',
+                  cargo_size: 'small',
+                  passenger_count: 1
+                }));
+                setShowMandaditoModal(true);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                color: '#FFFFFF',
+                fontWeight: 800,
+                padding: '12px 20px',
+                borderRadius: 'var(--radius-full)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 8px 24px -6px rgba(59, 130, 246, 0.45)'
+              }}
+            >
+              <User size={18} />
+              <span>Pedir Carrera / Taxi</span>
             </button>
           </div>
         </div>
@@ -576,18 +638,26 @@ export function ClientView({
                   width: 38,
                   height: 38,
                   borderRadius: 10,
-                  background: 'linear-gradient(135deg, #00F2FE, #4FACFE)',
+                  background: mandaditoForm.order_type === 'ride'
+                    ? 'linear-gradient(135deg, #3B82F6, #1D4ED8)'
+                    : mandaditoForm.cargo_size === 'heavy'
+                    ? 'linear-gradient(135deg, #F59E0B, #D97706)'
+                    : 'linear-gradient(135deg, #00F2FE, #4FACFE)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#000000'
+                  color: mandaditoForm.order_type === 'ride' || mandaditoForm.cargo_size === 'heavy' ? '#FFFFFF' : '#000000'
                 }}>
-                  <Bike size={20} />
+                  {mandaditoForm.order_type === 'ride' ? <User size={20} /> : mandaditoForm.cargo_size === 'heavy' ? <AlertTriangle size={20} /> : <Bike size={20} />}
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 17 }}>Pedir Mandadito / Encomienda</h3>
+                  <h3 style={{ fontSize: 17 }}>
+                    {mandaditoForm.order_type === 'ride' ? 'Pedir Carrera / Taxi' : 'Pedir Mandadito o Carga'}
+                  </h3>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Transporte y diligencias punto a punto sin tiendas
+                    {mandaditoForm.order_type === 'ride' 
+                      ? 'Traslados particulares y mototaxi con conductores verificados' 
+                      : 'Transporte de encomiendas y diligencias en tu zona'}
                   </p>
                 </div>
               </div>
@@ -598,57 +668,257 @@ export function ClientView({
 
             <form onSubmit={handleCreateMandaditoSubmit}>
               <div className="modal-body" style={{ maxHeight: '68vh', overflowY: 'auto' }}>
+                {/* 1. Selector: ¿Qué vas a trasladar? */}
+                <div style={{ marginBottom: 16 }}>
+                  <label className="input-label" style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, display: 'block' }}>
+                    ¿Qué vas a trasladar?
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {/* Persona(s) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundManager.playTap();
+                        setMandaditoForm(prev => ({
+                          ...prev,
+                          order_type: 'ride',
+                          cargo_size: 'small',
+                          passenger_count: prev.passenger_count || 1
+                        }));
+                      }}
+                      style={{
+                        padding: '12px 6px',
+                        borderRadius: 'var(--radius-md)',
+                        textAlign: 'center',
+                        border: mandaditoForm.order_type === 'ride' ? '2px solid #3B82F6' : '1px solid var(--border-subtle)',
+                        background: mandaditoForm.order_type === 'ride' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                        color: mandaditoForm.order_type === 'ride' ? '#60A5FA' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <User size={20} style={{ margin: '0 auto 4px', display: 'block' }} />
+                      <strong style={{ fontSize: 12, display: 'block' }}>Persona(s)</strong>
+                      <span style={{ fontSize: 10, opacity: 0.8 }}>Carrera / Taxi</span>
+                    </button>
+
+                    {/* Paquete Ligero */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundManager.playTap();
+                        setMandaditoForm(prev => ({
+                          ...prev,
+                          order_type: 'mandadito',
+                          cargo_size: 'small',
+                          passenger_count: 0
+                        }));
+                      }}
+                      style={{
+                        padding: '12px 6px',
+                        borderRadius: 'var(--radius-md)',
+                        textAlign: 'center',
+                        border: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
+                        background: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                        color: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small' ? '#34D399' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Package size={20} style={{ margin: '0 auto 4px', display: 'block' }} />
+                      <strong style={{ fontSize: 12, display: 'block' }}>Paquete ligero</strong>
+                      <span style={{ fontSize: 10, opacity: 0.8 }}>Sobre / Comida</span>
+                    </button>
+
+                    {/* Carga Pesada */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundManager.playTap();
+                        setMandaditoForm(prev => ({
+                          ...prev,
+                          order_type: 'mandadito',
+                          cargo_size: 'heavy',
+                          passenger_count: 0
+                        }));
+                      }}
+                      style={{
+                        padding: '12px 6px',
+                        borderRadius: 'var(--radius-md)',
+                        textAlign: 'center',
+                        border: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' ? '2px solid #F59E0B' : '1px solid var(--border-subtle)',
+                        background: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                        color: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' ? '#FBBF24' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <AlertTriangle size={20} style={{ margin: '0 auto 4px', display: 'block' }} />
+                      <strong style={{ fontSize: 12, display: 'block' }}>Carga pesada</strong>
+                      <span style={{ fontSize: 10, opacity: 0.8 }}>Repuesto / Bultos</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Si es Persona(s): Selector de cantidad y recomendación automática */}
+                {mandaditoForm.order_type === 'ride' && (
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 14px',
+                    marginBottom: 16
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <label style={{ fontSize: 12.5, fontWeight: 700, color: '#93C5FD' }}>
+                        Número de pasajeros:
+                      </label>
+                      <span style={{ fontSize: 12, color: '#60A5FA', fontWeight: 800 }}>
+                        {mandaditoForm.passenger_count || 1} {mandaditoForm.passenger_count === 1 ? 'Pasajero' : 'Pasajeros'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {[1, 2, 3, 4].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => {
+                            soundManager.playTap();
+                            setMandaditoForm(prev => ({ ...prev, passenger_count: num }));
+                          }}
+                          style={{
+                            padding: '8px',
+                            borderRadius: 'var(--radius-sm)',
+                            border: mandaditoForm.passenger_count === num ? '2px solid #3B82F6' : '1px solid rgba(255,255,255,0.1)',
+                            background: mandaditoForm.passenger_count === num ? '#3B82F6' : 'rgba(255,255,255,0.05)',
+                            color: mandaditoForm.passenger_count === num ? '#FFFFFF' : 'var(--text-main)',
+                            fontWeight: 800,
+                            fontSize: 13,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {num} {num === 1 ? '👤' : '👥'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {mandaditoForm.passenger_count > 1 ? (
+                      <div style={{
+                        marginTop: 10,
+                        padding: '8px 10px',
+                        borderRadius: 6,
+                        background: 'rgba(245, 158, 11, 0.12)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        fontSize: 11.5,
+                        color: '#FBBF24',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}>
+                        <Car size={16} style={{ flexShrink: 0 }} />
+                        <span><strong>Recomendación automática:</strong> Se recomienda solicitar vehículo de 4 ruedas, pero tu pedido no se bloquea y los conductores decidirán.</span>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, margin: '8px 0 0' }}>
+                        ✓ 1 Pasajero: Apto para mototaxi o carro según tu preferencia.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Si es Carga pesada: Recomendación automática */}
+                {mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' && (
+                  <div style={{
+                    background: 'rgba(245, 158, 11, 0.12)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 14px',
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: 12,
+                    color: '#FBBF24'
+                  }}>
+                    <Car size={18} style={{ flexShrink: 0 }} />
+                    <span><strong>Recomendación automática:</strong> Carga de volumen o peso considerable. Se recomienda vehículo de 4 ruedas, pero tu pedido no se bloquea.</span>
+                  </div>
+                )}
+
+                {/* Direcciones con GPS */}
                 <GpsLocationPicker
-                  label="Punto de Retiro (Origen)"
-                  placeholder="Ej: MRW del Centro / Farmatodo / Casa tía María"
+                  label={mandaditoForm.order_type === 'ride' ? '¿Dónde te recogemos? (Punto de Salida)' : 'Punto de Retiro (Origen)'}
+                  placeholder="Ej: Plaza Bolívar frente a la Catedral / Farmatodo"
                   value={mandaditoForm.pickup_address}
                   onChange={(val) => setMandaditoForm(prev => ({ ...prev, pickup_address: val }))}
                   coords={mandaditoPickupCoords}
                   onCoordsChange={setMandaditoPickupCoords}
-                  helperText="¿Estás en el sitio de retiro? Usa el GPS para fijar el origen automáticamente"
+                  helperText="Usa el GPS para fijar tu punto de salida con precisión milimétrica"
                   required
                 />
 
                 <GpsLocationPicker
-                  label="Punto de Entrega (Destino)"
+                  label={mandaditoForm.order_type === 'ride' ? '¿A dónde te llevamos? (Destino del viaje)' : 'Punto de Entrega (Destino)'}
                   placeholder="Ej: Urb. Las Acacias, Calle 4, Casa #12 (portón blanco)"
                   value={mandaditoForm.delivery_address}
                   onChange={(val) => setMandaditoForm(prev => ({ ...prev, delivery_address: val }))}
                   coords={mandaditoDeliveryCoords}
                   onCoordsChange={setMandaditoDeliveryCoords}
-                  helperText="Usa el GPS para fijar tu dirección exacta de entrega con precisión satelital"
+                  helperText="Usa el GPS para fijar tu destino exacto con precisión satelital"
                   required
                 />
 
                 <div className="input-group">
-                  <label className="input-label">Descripción de la tarea / ¿Qué debemos hacer?</label>
+                  <label className="input-label">
+                    {mandaditoForm.order_type === 'ride' 
+                      ? 'Referencia o punto de encuentro' 
+                      : 'Descripción de la tarea / ¿Qué debemos trasladar?'}
+                  </label>
                   <textarea
-                    required
-                    placeholder="Ej: Comprar 2 sueros y 1 acetaminofén en farmacia, o retirar paquete guía #1092..."
+                    placeholder={mandaditoForm.order_type === 'ride'
+                      ? 'Ej: Salgo por la puerta norte, llevo morral pequeño...'
+                      : mandaditoForm.cargo_size === 'heavy'
+                      ? 'Ej: Traslado de 2 baterías pesadas y repuestos en caja grande...'
+                      : 'Ej: Retirar paquete en MRW guía #1092 o comprar medicinas...'}
                     value={mandaditoForm.task_description}
                     onChange={(e) => setMandaditoForm({ ...mandaditoForm, task_description: e.target.value })}
+                    className="input-field"
+                    style={{ minHeight: 70 }}
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Notas adicionales para el conductor (opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Pago con billete de $10 exacto / Tocar corneta al llegar"
+                    value={mandaditoForm.notes || ''}
+                    onChange={(e) => setMandaditoForm({ ...mandaditoForm, notes: e.target.value })}
                     className="input-field"
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="input-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="input-label">Presupuesto compras ($)</label>
-                      <span style={{ fontSize: 11, color: '#FBBF24', fontWeight: 700 }}>
-                        {formatBs(parseFloat(mandaditoForm.purchase_budget) || 0)}
-                      </span>
+                <div style={{ display: 'grid', gridTemplateColumns: mandaditoForm.order_type === 'ride' ? '1fr' : '1fr 1fr', gap: 12 }}>
+                  {mandaditoForm.order_type !== 'ride' && (
+                    <div className="input-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="input-label">Presupuesto compras ($)</label>
+                        <span style={{ fontSize: 11, color: '#FBBF24', fontWeight: 700 }}>
+                          {formatBs(parseFloat(mandaditoForm.purchase_budget) || 0)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        placeholder="0.00 si solo traslado"
+                        value={mandaditoForm.purchase_budget}
+                        onChange={(e) => setMandaditoForm({ ...mandaditoForm, purchase_budget: e.target.value })}
+                        className="input-field"
+                      />
                     </div>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      placeholder="0.00 si no compra"
-                      value={mandaditoForm.purchase_budget}
-                      onChange={(e) => setMandaditoForm({ ...mandaditoForm, purchase_budget: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
+                  )}
 
                   <div className="input-group">
                     <label className="input-label">Método de Pago</label>
@@ -723,46 +993,69 @@ export function ClientView({
                 )}
 
                 {/* Cost Breakdown */}
-                <div style={{
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  padding: 14,
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 13
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
-                    <span>Tarifa Delivery Express:</span>
-                    <span>$2.00 · <strong style={{ color: '#E2E8F0' }}>{formatBs(2.00)}</strong></span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
-                    <span>Comisión Plataforma Mándalo!:</span>
-                    <span>$0.50 · <strong style={{ color: '#E2E8F0' }}>{formatBs(0.50)}</strong></span>
-                  </div>
-                  {parseFloat(mandaditoForm.purchase_budget) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
-                      <span>Presupuesto Compras:</span>
-                      <span>${parseFloat(mandaditoForm.purchase_budget).toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(mandaditoForm.purchase_budget)}</strong></span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: 8, fontWeight: 800 }}>
-                    <span>Total a Pagar:</span>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ color: '#00F2FE', fontSize: 16 }}>
-                        ${(2.50 + (parseFloat(mandaditoForm.purchase_budget) || 0)).toFixed(2)}
-                      </span>
-                      <div style={{ color: '#FBBF24', fontSize: 12.5, fontWeight: 700 }}>
-                        {formatBs(2.50 + (parseFloat(mandaditoForm.purchase_budget) || 0))}
+                {(() => {
+                  const isRide = mandaditoForm.order_type === 'ride';
+                  const isHeavy = mandaditoForm.cargo_size === 'heavy';
+                  const deliveryFee = isRide ? (mandaditoForm.passenger_count > 2 ? 3.50 : 2.50) : isHeavy ? 3.50 : 2.00;
+                  const platformFee = 0.50;
+                  const budget = isRide ? 0 : (parseFloat(mandaditoForm.purchase_budget) || 0);
+                  const total = deliveryFee + platformFee + budget;
+
+                  return (
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.25)',
+                      padding: 14,
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 13
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
+                        <span>{isRide ? 'Tarifa Carrera / Traslado:' : isHeavy ? 'Tarifa Carga Pesada:' : 'Tarifa Mandadito Ligero:'}</span>
+                        <span>${deliveryFee.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(deliveryFee)}</strong></span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
+                        <span>Comisión de Servicio:</span>
+                        <span>${platformFee.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(platformFee)}</strong></span>
+                      </div>
+                      {budget > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
+                          <span>Presupuesto Compras:</span>
+                          <span>${budget.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(budget)}</strong></span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: 8, fontWeight: 800 }}>
+                        <span>Total Estimado:</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ color: isRide ? '#60A5FA' : '#00F2FE', fontSize: 17 }}>
+                            ${total.toFixed(2)}
+                          </span>
+                          <div style={{ color: '#FBBF24', fontSize: 12.5, fontWeight: 700 }}>
+                            {formatBs(total)}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
               <div className="modal-footer">
                 <button type="button" onClick={() => setShowMandaditoModal(false)} className="btn-outline">
                   Cancelar
                 </button>
-                <button type="submit" className="btn-brand" style={{ background: 'linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%)', color: '#000000' }}>
-                  Solicitar Mandadito Ahora
+                <button
+                  type="submit"
+                  className="btn-brand"
+                  style={{
+                    background: mandaditoForm.order_type === 'ride'
+                      ? 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'
+                      : mandaditoForm.cargo_size === 'heavy'
+                      ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                      : 'linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%)',
+                    color: mandaditoForm.order_type === 'ride' || mandaditoForm.cargo_size === 'heavy' ? '#FFFFFF' : '#000000',
+                    fontWeight: 800
+                  }}
+                >
+                  {mandaditoForm.order_type === 'ride' ? 'Solicitar Carrera Ahora' : 'Publicar Mandadito Ahora'}
                 </button>
               </div>
             </form>
