@@ -191,7 +191,7 @@ export function Navbar({
               soundManager.playTap();
               onOpenPwaModal();
             }}
-            title="Instalar como App PWA en móvil o PC"
+            title="Instalar Mándalo en móvil o PC"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -206,7 +206,7 @@ export function Navbar({
             }}
           >
             <Download size={15} style={{ color: '#FBBF24' }} />
-            <span style={{ display: 'none' }} className="hide-mobile">Instalar PWA</span>
+            <span style={{ display: 'none' }} className="hide-mobile">Instalar Mándalo</span>
           </button>
 
           {/* Cart button for client role */}

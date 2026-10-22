@@ -37,7 +37,7 @@ export function PwaInstallModal({ onClose, deferredPrompt, onInstallPrompt }) {
           {deferredPrompt ? (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
               <p style={{ marginBottom: 16, fontSize: 14 }}>
-                Tu navegador es totalmente compatible con la instalación directa de Progressive Web Apps.
+                Tu navegador es totalmente compatible con la instalación directa de Mándalo.
               </p>
               <button
                 onClick={onInstallPrompt}
@@ -45,7 +45,7 @@ export function PwaInstallModal({ onClose, deferredPrompt, onInstallPrompt }) {
                 style={{ width: '100%', padding: '14px' }}
               >
                 <Download size={18} />
-                <span>Instalar Aplicación Ahora</span>
+                <span>Instalar Mándalo Ahora</span>
               </button>
             </div>
           ) : isIOS ? (
