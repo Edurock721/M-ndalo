@@ -24,6 +24,7 @@ import {
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
 import { GpsLocationPicker } from './GpsLocationPicker';
+import { handleImageError } from '../lib/imageFallback';
 
 export function ClientView({ 
   merchants, 
@@ -461,6 +462,7 @@ export function ClientView({
                 <img
                   src={merchant.banner_url}
                   alt={merchant.name}
+                  onError={(e) => handleImageError(e, 'store')}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
                 <div style={{
@@ -544,6 +546,7 @@ export function ClientView({
               <img
                 src={selectedMerchant.banner_url}
                 alt={selectedMerchant.name}
+                onError={(e) => handleImageError(e, 'store')}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <div style={{
@@ -589,6 +592,7 @@ export function ClientView({
                         <img
                           src={product.image_url}
                           alt={product.name}
+                          onError={(e) => handleImageError(e, 'product')}
                           style={{
                             width: 76,
                             height: 76,

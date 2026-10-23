@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
+import { handleImageError } from '../lib/imageFallback';
 
 export function MerchantView({ 
   merchant, 
@@ -123,6 +124,7 @@ export function MerchantView({
             <img
               src={merchant?.banner_url}
               alt={merchant?.name}
+              onError={(e) => handleImageError(e, 'store')}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
@@ -416,6 +418,7 @@ export function MerchantView({
                   <img
                     src={prod.image_url}
                     alt={prod.name}
+                    onError={(e) => handleImageError(e, 'product')}
                     style={{ width: 68, height: 68, borderRadius: 8, objectFit: 'cover' }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>

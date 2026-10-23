@@ -1,13 +1,28 @@
-const CACHE_NAME = 'mandalo-cache-v3';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'mandalo-cache-v4';
+const IMAGES_CACHE = 'mandalo-images-v1';
+
+const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon.svg'
 ];
 
+// SVG local de respaldo si la conexión se cae y no hay caché
+const FALLBACK_SVG_IMAGE = `
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="#141E33"/>
+  <circle cx="200" cy="130" r="45" fill="rgba(255,94,54,0.2)"/>
+  <text x="200" y="142" font-family="sans-serif" font-size="34" text-anchor="middle" fill="#FF5E36">🛵</text>
+  <text x="200" y="210" font-family="sans-serif" font-weight="bold" font-size="18" fill="#FFFFFF" text-anchor="middle">MÁNDALO!</text>
+  <text x="200" y="235" font-family="sans-serif" font-size="12" fill="#94A3B8" text-anchor="middle">Modo Fuera de Línea</text>
+</svg>`.trim();
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -15,7 +30,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key !== CACHE_NAME && key !== IMAGES_CACHE) {
             return caches.delete(key);
           }
         })
@@ -24,24 +39,60 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Bypass caching for development requests (Vite HMR, localhost, web worker, APIs)
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
-  // Never intercept Vite internal modules or API calls
+  // 1. NUNCA cachear peticiones de Base de Datos, Auth o APIs en tiempo real
+  // La base de datos siempre va directa a la nube (Supabase / DolarAPI)
   if (
-    url.includes('localhost') || 
-    url.includes('127.0.0.1') || 
-    url.includes('/@') || 
-    url.includes('/src/') ||
+    url.includes('/rest/v1/') ||
+    url.includes('/auth/v1/') ||
+    url.includes('/realtime/v1/') ||
     url.includes('dolarapi.com') ||
-    url.includes('supabase.co') ||
+    url.includes('localhost') ||
+    url.includes('127.0.0.1') ||
+    url.includes('/@') ||
+    url.includes('/src/') ||
     event.request.method !== 'GET'
   ) {
     return;
   }
 
-  // Network-First for HTML navigation so GitHub Pages updates are seen immediately
+  // 2. Caché Persistente de Imágenes (Banners, Fotos de Productos, Comprobantes, Iconos)
+  const isImageRequest = 
+    event.request.destination === 'image' ||
+    url.match(/\.(png|jpg|jpeg|svg|webp|gif|avif)(\?.*)?$/i) ||
+    url.includes('images.unsplash.com') ||
+    url.includes('/storage/v1/object/public/');
+
+  if (isImageRequest) {
+    event.respondWith(
+      caches.open(IMAGES_CACHE).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            // Servido 100% desde almacenamiento local (Costo $0, ultra rápido)
+            return cachedResponse;
+          }
+
+          // Si no está en caché, descargarlo una sola vez y guardarlo en el disco del celular/PC
+          return fetch(event.request).then((networkResponse) => {
+            if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => {
+            // Si falla la red (sin conexión), retornar el SVG local de respaldo
+            return new Response(FALLBACK_SVG_IMAGE, {
+              headers: { 'Content-Type': 'image/svg+xml' }
+            });
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // 3. Network-First para Navegación HTML (Para que los despliegues de GitHub Pages se actualicen al instante)
   if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       fetch(event.request)
@@ -59,7 +110,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first with network fallback for static hashed assets
+  // 4. Cache-First para recursos estáticos del bundle compilado (JS, CSS)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -95,8 +146,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: './icon.svg',
+    badge: './icon.svg',
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/'
