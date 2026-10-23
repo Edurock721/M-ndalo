@@ -180,15 +180,15 @@ export function ClientView({
         position: 'relative',
         overflow: 'hidden'
       }}>
-        <div style={{ maxWidth: 640 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255, 94, 54, 0.2)', padding: '4px 10px', borderRadius: 'var(--radius-full)', color: 'var(--brand-orange)', fontSize: 11, fontWeight: 800, marginBottom: 10, border: '1px solid rgba(255, 94, 54, 0.3)' }}>
-            <Sparkles size={13} />
+        <div style={{ maxWidth: 680 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255, 94, 54, 0.2)', padding: '5px 12px', borderRadius: 'var(--radius-full)', color: 'var(--brand-orange)', fontSize: 11.5, fontWeight: 800, marginBottom: 12, border: '1px solid rgba(255, 94, 54, 0.3)' }}>
+            <Sparkles size={14} />
             TODO TU PUEBLO EN TUS MANOS
           </div>
-          <h2 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            ¿Qué necesitas hoy, Carlos?
+          <h2 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 900, marginBottom: 10, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+            ¿Qué necesitas hoy, {currentUser?.name?.split(' ')[0] || currentUser?.full_name?.split(' ')[0] || 'Cliente'}? 👋
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
+          <p style={{ fontSize: 14.5, color: '#CBD5E1', marginBottom: 22, lineHeight: 1.5 }}>
             Pide en tus tiendas locales favoritas con catálogo digital o solicita un mandadito particular punto a punto sin intermediarios.
           </p>
 
@@ -220,12 +220,17 @@ export function ClientView({
                 background: 'linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%)',
                 color: '#000000',
                 fontWeight: 800,
-                padding: '12px 20px',
-                borderRadius: 'var(--radius-full)',
+                fontSize: 14,
+                padding: '12px 22px',
+                borderRadius: 14,
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 8,
-                boxShadow: '0 8px 24px -6px rgba(0, 242, 254, 0.45)'
+                boxShadow: '0 4px 16px rgba(0, 242, 254, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               <Bike size={18} />
@@ -247,12 +252,17 @@ export function ClientView({
                 background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
                 color: '#FFFFFF',
                 fontWeight: 800,
-                padding: '12px 20px',
-                borderRadius: 'var(--radius-full)',
+                fontSize: 14,
+                padding: '12px 22px',
+                borderRadius: 14,
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 8,
-                boxShadow: '0 8px 24px -6px rgba(59, 130, 246, 0.45)'
+                boxShadow: '0 4px 16px rgba(59, 130, 246, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               <User size={18} />
@@ -272,20 +282,20 @@ export function ClientView({
             </h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 18 }}>
             {clientOrders.map((ord) => {
               const isMandadito = ord.order_type === 'mandadito';
 
               return (
-                <div key={ord.id} className="glass-panel" style={{ padding: 18, background: 'var(--bg-surface)' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div key={ord.id} className="glass-panel" style={{ padding: 20, background: '#0E1526', border: '1.5px solid #233352' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, gap: 10 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 15, fontWeight: 800 }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: '#FFFFFF' }}>
                           {isMandadito ? 'Mandadito Express' : ord.merchant_name}
                         </span>
                       </div>
-                      <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                      <span style={{ fontSize: 11.5, color: '#94A3B8', marginTop: 2, display: 'block' }}>
                         #{ord.id.slice(-6).toUpperCase()} • {new Date(ord.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -301,13 +311,13 @@ export function ClientView({
                   </div>
 
                   {/* Order summary */}
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 8 }}>
+                  <div style={{ fontSize: 13, color: '#CBD5E1', marginBottom: 16, background: '#141F38', border: '1px solid #253554', padding: 12, borderRadius: 14 }}>
                     {isMandadito ? (
                       <p><strong>Tarea:</strong> {ord.task_description}</p>
                     ) : (
                       <p><strong>Artículos:</strong> {ord.items?.map(i => `${i.quantity}x ${i.name}`).join(', ')}</p>
                     )}
-                    <p style={{ marginTop: 4 }}><strong>Destino:</strong> {ord.delivery_address}</p>
+                    <p style={{ marginTop: 6 }}><strong>Destino:</strong> {ord.delivery_address}</p>
                   </div>
 
                   {/* Rider info if assigned */}
@@ -318,21 +328,22 @@ export function ClientView({
                       gap: 8,
                       fontSize: 12.5,
                       color: '#38BDF8',
-                      marginBottom: 14,
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      background: 'rgba(56, 189, 248, 0.08)'
+                      marginBottom: 16,
+                      padding: '8px 12px',
+                      borderRadius: 12,
+                      background: 'rgba(56, 189, 248, 0.1)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)'
                     }}>
                       <Bike size={16} />
                       <span>Rider asignado: <strong>{ord.rider_name}</strong></span>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #1E293B', paddingTop: 14 }}>
                     <div>
-                      <span style={{ fontSize: 11, color: 'var(--text-dim)', display: 'block' }}>Total</span>
+                      <span style={{ fontSize: 11, color: '#94A3B8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Total</span>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                        <strong style={{ fontSize: 16, color: 'var(--brand-orange)' }}>
+                        <strong style={{ fontSize: 17, color: 'var(--brand-orange)', fontFamily: 'monospace' }}>
                           {formatUSD(ord.total)}
                         </strong>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>
@@ -347,7 +358,7 @@ export function ClientView({
                         onOpenChat(ord);
                       }}
                       className="btn-outline"
-                      style={{ fontSize: 12.5, padding: '7px 14px' }}
+                      style={{ fontSize: 12.5, padding: '8px 16px' }}
                     >
                       <MessageSquare size={15} style={{ color: 'var(--brand-orange)' }} />
                       <span>Chat en Vivo</span>
@@ -362,25 +373,26 @@ export function ClientView({
 
       {/* Comercios Aliados Section */}
       <div id="comercios-section">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div>
-            <h3 style={{ fontSize: 20 }}>Comercios Locales Aliados</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Compra directo sin comisiones abusivas</p>
+            <h3 style={{ fontSize: 22, fontWeight: 900, color: '#FFFFFF' }}>Comercios Locales Aliados</h3>
+            <p style={{ fontSize: 13.5, color: '#94A3B8' }}>Compra directo sin comisiones abusivas</p>
           </div>
 
           {/* Search bar */}
           <div style={{
             position: 'relative',
-            minWidth: 260
+            flex: '1 1 280px',
+            maxWidth: 380
           }}>
-            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
             <input
               type="text"
               placeholder="Buscar tienda, comida o medicina..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input-field"
-              style={{ paddingLeft: 38, borderRadius: 'var(--radius-full)', fontSize: 13 }}
+              style={{ paddingLeft: 46, borderRadius: 16, height: 48, fontSize: 13.5 }}
             />
           </div>
         </div>
@@ -388,10 +400,11 @@ export function ClientView({
         {/* Category Pills */}
         <div style={{
           display: 'flex',
-          gap: 8,
+          gap: 10,
           overflowX: 'auto',
-          paddingBottom: 8,
-          marginBottom: 20
+          paddingBottom: 10,
+          marginBottom: 24,
+          WebkitOverflowScrolling: 'touch'
         }}>
           {categories.map((cat) => (
             <button
@@ -401,15 +414,17 @@ export function ClientView({
                 setSelectedCategory(cat);
               }}
               style={{
-                padding: '7px 16px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: 13,
-                fontWeight: 600,
+                padding: '9px 18px',
+                borderRadius: 14,
+                fontSize: 13.5,
+                fontWeight: 700,
                 whiteSpace: 'nowrap',
-                background: selectedCategory === cat ? 'var(--brand-gradient)' : 'rgba(255, 255, 255, 0.05)',
-                color: selectedCategory === cat ? '#FFFFFF' : 'var(--text-muted)',
-                border: selectedCategory === cat ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--border-subtle)',
-                transition: 'all 0.2s'
+                background: selectedCategory === cat ? 'var(--brand-gradient)' : '#141F38',
+                color: selectedCategory === cat ? '#FFFFFF' : '#CBD5E1',
+                border: selectedCategory === cat ? '1px solid rgba(255,255,255,0.3)' : '1.5px solid #2B3D5D',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: selectedCategory === cat ? '0 4px 14px rgba(255, 94, 54, 0.35)' : 'none'
               }}
             >
               {cat}
@@ -420,7 +435,7 @@ export function ClientView({
         {/* Merchants Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
           gap: 20
         }}>
           {filteredMerchants.map((merchant) => (

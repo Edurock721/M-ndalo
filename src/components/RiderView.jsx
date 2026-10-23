@@ -119,12 +119,16 @@ export function RiderView({
         </div>
 
         {/* Tab switch */}
+        {/* Tab switcher con scroll horizontal suave en móvil */}
         <div style={{
           display: 'flex',
-          background: 'rgba(0,0,0,0.3)',
-          padding: 4,
-          borderRadius: 'var(--radius-full)',
-          border: '1px solid var(--border-subtle)'
+          background: 'rgba(0,0,0,0.4)',
+          padding: 6,
+          borderRadius: 16,
+          border: '1.5px solid rgba(255, 255, 255, 0.1)',
+          overflowX: 'auto',
+          maxWidth: '100%',
+          WebkitOverflowScrolling: 'touch'
         }}>
           {[
             { id: 'radar', label: `Radar (${availableOrders.length})`, count: availableOrders.length },
@@ -138,15 +142,18 @@ export function RiderView({
                 setActiveTab(tab.id);
               }}
               style={{
-                padding: '7px 16px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: 13,
-                fontWeight: 700,
+                padding: '9px 18px',
+                borderRadius: 12,
+                fontSize: 13.5,
+                fontWeight: 800,
+                whiteSpace: 'nowrap',
                 background: activeTab === tab.id ? 'linear-gradient(135deg, #00F2FE, #4FACFE)' : 'transparent',
-                color: activeTab === tab.id ? '#000000' : 'var(--text-muted)',
+                color: activeTab === tab.id ? '#000000' : '#CBD5E1',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6
+                gap: 8,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
               }}
             >
               <span>{tab.label}</span>
@@ -154,13 +161,14 @@ export function RiderView({
                 <span style={{
                   background: 'var(--brand-orange)',
                   color: '#FFFFFF',
-                  width: 18,
-                  height: 18,
+                  width: 20,
+                  height: 20,
                   borderRadius: '50%',
-                  fontSize: 10,
+                  fontSize: 11,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  fontWeight: 900
                 }} className="pulse-alert">
                   {tab.count}
                 </span>
@@ -172,13 +180,13 @@ export function RiderView({
 
       {/* Tab: Radar (Available dispatches) */}
       {activeTab === 'radar' && (
-        <div>
-          <div style={{ marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Navigation size={18} style={{ color: '#00F2FE' }} />
+        <div className="space-y-6">
+          <div>
+            <h3 style={{ fontSize: 22, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, color: '#FFFFFF' }}>
+              <Navigation size={22} style={{ color: '#00F2FE' }} />
               Bolsa de Servicios en la Zona ({availableOrders.length})
             </h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: 13.5, color: '#94A3B8', marginTop: 4 }}>
               Elige con libertad según tu vehículo y disponibilidad. Tú decides qué servicio tomar.
             </p>
           </div>
@@ -187,16 +195,16 @@ export function RiderView({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 10,
             flexWrap: 'wrap',
-            marginBottom: 16,
-            padding: '12px 14px',
-            borderRadius: 'var(--radius-lg)',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-subtle)'
+            padding: '16px 20px',
+            borderRadius: 20,
+            background: '#0E1526',
+            border: '1.5px solid #233352',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, color: 'var(--text-dim)', marginRight: 4 }}>
-              <SlidersHorizontal size={14} style={{ color: 'var(--brand-orange)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 800, color: '#94A3B8', marginRight: 6 }}>
+              <SlidersHorizontal size={16} style={{ color: 'var(--brand-orange)' }} />
               <span>FILTROS RÁPIDOS:</span>
             </div>
 
@@ -209,21 +217,21 @@ export function RiderView({
               }}
               style={{
                 cursor: 'pointer',
-                padding: '6px 14px',
-                borderRadius: 'var(--radius-full)',
-                border: showRides ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
-                background: showRides ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
-                color: showRides ? '#60A5FA' : 'var(--text-muted)',
+                padding: '8px 16px',
+                borderRadius: 12,
+                border: showRides ? '1.5px solid rgba(59, 130, 246, 0.6)' : '1.5px solid #2B3D5D',
+                background: showRides ? 'rgba(59, 130, 246, 0.22)' : '#141F38',
+                color: showRides ? '#93C5FD' : '#94A3B8',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
-                fontSize: 12.5,
-                fontWeight: 700,
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 800,
                 transition: 'all 0.2s ease'
               }}
             >
               <span>{showRides ? '☑' : '☐'}</span>
-              <User size={13} />
+              <User size={15} />
               <span>Ver Carreras / Pasajeros ({ridesCount})</span>
             </button>
 
@@ -236,21 +244,21 @@ export function RiderView({
               }}
               style={{
                 cursor: 'pointer',
-                padding: '6px 14px',
-                borderRadius: 'var(--radius-full)',
-                border: showPackages ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
-                background: showPackages ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                color: showPackages ? '#34D399' : 'var(--text-muted)',
+                padding: '8px 16px',
+                borderRadius: 12,
+                border: showPackages ? '1.5px solid rgba(16, 185, 129, 0.6)' : '1.5px solid #2B3D5D',
+                background: showPackages ? 'rgba(16, 185, 129, 0.22)' : '#141F38',
+                color: showPackages ? '#6EE7B7' : '#94A3B8',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
-                fontSize: 12.5,
-                fontWeight: 700,
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 800,
                 transition: 'all 0.2s ease'
               }}
             >
               <span>{showPackages ? '☑' : '☐'}</span>
-              <Package size={13} />
+              <Package size={15} />
               <span>Ver Encomiendas / Compras ({packagesCount})</span>
             </button>
 
@@ -263,33 +271,33 @@ export function RiderView({
               }}
               style={{
                 cursor: 'pointer',
-                padding: '6px 14px',
-                borderRadius: 'var(--radius-full)',
-                border: showHeavy ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
-                background: showHeavy ? 'rgba(245, 158, 11, 0.18)' : 'transparent',
-                color: showHeavy ? '#FBBF24' : 'var(--text-muted)',
+                padding: '8px 16px',
+                borderRadius: 12,
+                border: showHeavy ? '1.5px solid rgba(245, 158, 11, 0.6)' : '1.5px solid #2B3D5D',
+                background: showHeavy ? 'rgba(245, 158, 11, 0.22)' : '#141F38',
+                color: showHeavy ? '#FCD34D' : '#94A3B8',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
-                fontSize: 12.5,
-                fontWeight: 700,
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 800,
                 transition: 'all 0.2s ease'
               }}
             >
               <span>{showHeavy ? '☑' : '☐'}</span>
-              <AlertTriangle size={13} />
+              <AlertTriangle size={15} />
               <span>Ver Cargas pesadas ({heavyCount})</span>
             </button>
           </div>
 
           {filteredAvailableOrders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-dim)' }} className="glass-panel">
-              <Bike size={44} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-              <p style={{ fontSize: 15 }}>No hay servicios que coincidan con tus filtros activos.</p>
-              <p style={{ fontSize: 12 }}>Activa más filtros arriba o espera una nueva alerta sonora en la zona.</p>
+            <div style={{ textAlign: 'center', padding: '50px 24px', color: '#94A3B8' }} className="glass-panel">
+              <Bike size={50} style={{ margin: '0 auto 14px', opacity: 0.4 }} />
+              <p style={{ fontSize: 17, fontWeight: 700, color: '#FFFFFF' }}>No hay servicios que coincidan con tus filtros activos.</p>
+              <p style={{ fontSize: 13, marginTop: 4 }}>Activa más filtros arriba o espera una nueva alerta sonora en la zona.</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: 20 }}>
               {filteredAvailableOrders.map((ord) => {
                 const isRide = ord.order_type === 'ride';
                 const isMandadito = ord.order_type === 'mandadito';
@@ -481,7 +489,7 @@ export function RiderView({
               <p style={{ fontSize: 12 }}>Ve a la pestaña &quot;Radar&quot; para tomar un pedido disponible.</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: 16 }}>
               {myActiveOrders.map((ord) => {
                 const isMandadito = ord.order_type === 'mandadito';
                 const destinationParam = ord.delivery_coords

@@ -138,13 +138,16 @@ export function MerchantView({
           </div>
         </div>
 
-        {/* Tab switcher */}
+        {/* Tab switcher con scroll horizontal suave en móvil */}
         <div style={{
           display: 'flex',
-          background: 'rgba(0,0,0,0.3)',
-          padding: 4,
-          borderRadius: 'var(--radius-full)',
-          border: '1px solid var(--border-subtle)'
+          background: 'rgba(0,0,0,0.4)',
+          padding: 6,
+          borderRadius: 16,
+          border: '1.5px solid rgba(255, 255, 255, 0.1)',
+          overflowX: 'auto',
+          maxWidth: '100%',
+          WebkitOverflowScrolling: 'touch'
         }}>
           {[
             { id: 'orders', label: `Órdenes (${pendingOrders.length + activeOrders.length})`, count: pendingOrders.length },
@@ -158,15 +161,18 @@ export function MerchantView({
                 setActiveTab(tab.id);
               }}
               style={{
-                padding: '7px 16px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: 13,
-                fontWeight: 700,
+                padding: '9px 18px',
+                borderRadius: 12,
+                fontSize: 13.5,
+                fontWeight: 800,
+                whiteSpace: 'nowrap',
                 background: activeTab === tab.id ? '#A855F7' : 'transparent',
-                color: activeTab === tab.id ? '#FFFFFF' : 'var(--text-muted)',
+                color: activeTab === tab.id ? '#FFFFFF' : '#CBD5E1',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6
+                gap: 8,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
               }}
             >
               <span>{tab.label}</span>
@@ -174,13 +180,14 @@ export function MerchantView({
                 <span style={{
                   background: '#EF4444',
                   color: '#FFFFFF',
-                  width: 18,
-                  height: 18,
+                  width: 20,
+                  height: 20,
                   borderRadius: '50%',
-                  fontSize: 10,
+                  fontSize: 11,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  fontWeight: 900
                 }} className="pulse-alert">
                   {tab.count}
                 </span>
@@ -197,16 +204,16 @@ export function MerchantView({
           {pendingOrders.length > 0 && (
             <div style={{
               background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: 'var(--radius-lg)',
-              padding: 16
+              border: '1.5px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: 20,
+              padding: 20
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: '#F87171', fontWeight: 800, fontSize: 15 }}>
-                <Bell size={18} className="pulse-alert" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: '#F87171', fontWeight: 900, fontSize: 16 }}>
+                <Bell size={20} className="pulse-alert" />
                 <span>NUEVOS PEDIDOS ENTRANTES ({pendingOrders.length})</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
                 {pendingOrders.map((ord) => (
                   <div key={ord.id} className="glass-panel" style={{ padding: 16, background: 'var(--bg-surface-elevated)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -295,7 +302,7 @@ export function MerchantView({
                 <p>No tienes órdenes activas en este momento.</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 14 }}>
                 {activeOrders.map((ord) => (
                   <div key={ord.id} className="glass-panel" style={{ padding: 18, background: 'var(--bg-surface)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -401,7 +408,7 @@ export function MerchantView({
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
             {products
               .filter((p) => p.merchant_id === merchant.id)
               .map((prod) => (

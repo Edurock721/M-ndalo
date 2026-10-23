@@ -129,7 +129,7 @@ export function AdminView({
       {/* Financial KPIs */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
         gap: 16,
         marginBottom: 24
       }}>
@@ -277,18 +277,18 @@ export function AdminView({
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 24, marginTop: 12 }}>
         {/* Verification of Merchants & Riders */}
-        <div className="glass-panel" style={{ padding: 20 }}>
-          <h3 style={{ fontSize: 17, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Users size={18} style={{ color: '#10B981' }} />
-            Aprobación y Verificación de Usuarios (RBAC)
+        <div className="glass-panel" style={{ padding: 24, borderRadius: 24, background: '#0E1526', border: '1.5px solid rgba(255, 255, 255, 0.1)' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Users size={20} style={{ color: '#10B981' }} />
+            Auditoría de Aprobaciones (RBAC)
           </h3>
-          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 16 }}>
-            Activa o desactiva credenciales de comercios y repartidores
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+            Verifica el estado activo o suspendido de cada usuario en el sistema
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {profiles
               .filter(p => p.role !== 'admin')
               .map((prof) => (
@@ -298,19 +298,20 @@ export function AdminView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: 12,
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid var(--border-subtle)'
+                    padding: '16px 18px',
+                    borderRadius: 16,
+                    background: '#141E34',
+                    border: '1.5px solid #253554',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
                   }}
                 >
-                  <div>
-                    <strong style={{ fontSize: 14 }}>{prof.full_name}</strong>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      Rol: <strong style={{ textTransform: 'uppercase', color: 'var(--brand-orange)' }}>{prof.role}</strong> • {prof.phone}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <strong style={{ fontSize: 15, color: '#FFFFFF' }}>{prof.full_name}</strong>
+                    <div style={{ fontSize: 12.5, color: '#94A3B8' }}>
+                      Rol: <strong style={{ textTransform: 'uppercase', color: 'var(--brand-orange)' }}>{prof.role}</strong> • {prof.phone || 'Sin teléfono'}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>
-                      Saldo: <strong style={{ color: 'var(--text-main)' }}>${prof.wallet_balance.toFixed(2)}</strong> <span style={{ color: '#FBBF24' }}>· {formatBs(prof.wallet_balance)}</span>
+                    <div style={{ fontSize: 12, color: '#CBD5E1', marginTop: 2 }}>
+                      Saldo: <strong style={{ color: '#10B981', fontWeight: 800 }}>${Number(prof.wallet_balance || 0).toFixed(2)} USD</strong> <span style={{ color: '#FBBF24' }}>· {formatBs(prof.wallet_balance)}</span>
                     </div>
                   </div>
 
@@ -322,18 +323,20 @@ export function AdminView({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 12px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      background: prof.is_verified ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                      gap: 8,
+                      padding: '8px 16px',
+                      borderRadius: 12,
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      background: prof.is_verified ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
                       color: prof.is_verified ? '#34D399' : '#F87171',
-                      border: prof.is_verified ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
+                      border: prof.is_verified ? '1.5px solid rgba(16, 185, 129, 0.4)' : '1.5px solid rgba(239, 68, 68, 0.4)'
                     }}
                   >
-                    {prof.is_verified ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                    <span>{prof.is_verified ? 'Verificado' : 'Sin Verificar'}</span>
+                    {prof.is_verified ? <CheckCircle size={15} /> : <XCircle size={15} />}
+                    <span>{prof.is_verified ? 'Aprobado' : 'Suspendido'}</span>
                   </button>
                 </div>
               ))}
@@ -341,12 +344,12 @@ export function AdminView({
         </div>
 
         {/* Manual Top-up tool via Pago Movil */}
-        <div className="glass-panel" style={{ padding: 20 }}>
-          <h3 style={{ fontSize: 17, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CreditCard size={18} style={{ color: 'var(--brand-orange)' }} />
+        <div className="glass-panel" style={{ padding: 24, borderRadius: 24, background: '#0E1526', border: '1.5px solid rgba(255, 255, 255, 0.1)' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CreditCard size={20} style={{ color: 'var(--brand-orange)' }} />
             Recarga Manual de Saldo Prepagado
           </h3>
-          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
             Abona saldo a riders o comercios tras validar su Pago Móvil
           </p>
 

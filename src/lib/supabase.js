@@ -309,6 +309,31 @@ class LocalStore {
       this.saveToStorage();
     }
   }
+
+  updateProfile(userId, updates) {
+    const idx = this.profiles.findIndex(p => p.id === userId);
+    if (idx !== -1) {
+      this.profiles[idx] = { ...this.profiles[idx], ...updates, updated_at: new Date().toISOString() };
+      if (this.profiles[idx].role === 'merchant') {
+        const mIdx = this.merchants.findIndex(m => m.owner_id === userId || m.id === userId);
+        if (mIdx !== -1) {
+          this.merchants[mIdx] = {
+            ...this.merchants[mIdx],
+            name: updates.merchant_name || updates.full_name || this.merchants[mIdx].name,
+            address: updates.address || this.merchants[mIdx].address,
+            phone: updates.phone || this.merchants[mIdx].phone
+          };
+        }
+      }
+      this.saveToStorage();
+    }
+  }
+
+  deleteProfile(userId) {
+    this.profiles = this.profiles.filter(p => p.id !== userId);
+    this.merchants = this.merchants.filter(m => m.owner_id !== userId && m.id !== userId);
+    this.saveToStorage();
+  }
 }
 
 export const localStore = new LocalStore();
