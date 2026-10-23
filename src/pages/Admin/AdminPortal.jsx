@@ -216,16 +216,17 @@ export function AdminPortal() {
   const filteredClients = filterList(clientsList);
 
   // Acciones administrativas
-  const handleToggleVerification = async (userId, newStatus, userName) => {
+  const handleToggleVerification = async (userId, newStatus, userName, role) => {
     try {
-      await updateUserVerification(userId, newStatus);
+      await updateUserVerification(userId, newStatus, role);
       showNotification(
         newStatus 
           ? `✓ Se ha aprobado y activado a "${userName}"` 
           : `⏸ Se ha suspendido a "${userName}"`
       );
     } catch (e) {
-      showNotification('Error al cambiar el estado del usuario', 'error');
+      console.error('Error al cambiar el estado del usuario:', e);
+      showNotification(e.message || 'Error al cambiar el estado del usuario', 'error');
     }
   };
 
@@ -702,7 +703,7 @@ export function AdminPortal() {
                         <div className="flex items-center gap-3 flex-wrap">
                           {!isVerified ? (
                             <button
-                              onClick={() => handleToggleVerification(r.id, true, r.full_name)}
+                              onClick={() => handleToggleVerification(r.id, true, r.full_name, r.role)}
                               className="h-12 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/25 cursor-pointer"
                             >
                               <CheckCircle className="w-5 h-5" />
@@ -710,7 +711,7 @@ export function AdminPortal() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleToggleVerification(r.id, false, r.full_name)}
+                              onClick={() => handleToggleVerification(r.id, false, r.full_name, r.role)}
                               className="h-12 px-6 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
                             >
                               <UserX className="w-5 h-5" />
@@ -853,7 +854,7 @@ export function AdminPortal() {
                         <div className="flex items-center gap-3 flex-wrap">
                           {!isVerified ? (
                             <button
-                              onClick={() => handleToggleVerification(m.id, true, storeName)}
+                              onClick={() => handleToggleVerification(m.id, true, storeName, m.role)}
                               className="h-12 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/25 cursor-pointer"
                             >
                               <CheckCircle className="w-5 h-5" />
@@ -861,7 +862,7 @@ export function AdminPortal() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleToggleVerification(m.id, false, storeName)}
+                              onClick={() => handleToggleVerification(m.id, false, storeName, m.role)}
                               className="h-12 px-6 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
                             >
                               <UserX className="w-5 h-5" />

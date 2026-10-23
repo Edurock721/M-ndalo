@@ -175,7 +175,7 @@ export function AuthProvider({ children }) {
   };
 
   // Actualizar estado de verificación de un usuario (para Administrador)
-  const updateUserVerification = async (userId, isVerified) => {
+  const updateUserVerification = async (userId, isVerified, role) => {
     if (isConfigured) {
       const { error: profileError } = await supabase
         .from('profiles')
@@ -183,11 +183,13 @@ export function AuthProvider({ children }) {
         .eq('id', userId);
       if (profileError) throw profileError;
 
-      const { error: merchantError } = await supabase.rpc('admin_set_merchant_verified', {
-        p_owner_id: userId,
-        p_verified: isVerified
-      });
-      if (merchantError) throw merchantError;
+      if (role === 'merchant') {
+        const { error: merchantError } = await supabase.rpc('admin_set_merchant_verified', {
+          p_owner_id: userId,
+          p_verified: isVerified
+        });
+        if (merchantError) throw merchantError;
+      }
     }
 
     // Actualizar también en el store local para reactividad inmediata
