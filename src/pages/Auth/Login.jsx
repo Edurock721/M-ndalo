@@ -52,7 +52,7 @@ export function Login() {
       if (msg.includes('invalid login') || msg.includes('invalid credentials')) {
         setErrorMsg('Correo o contraseña incorrectos. Verifica tus datos.');
       } else if (msg.includes('email not confirmed') || msg.includes('not confirmed')) {
-        setErrorMsg('Tu correo aún no ha sido confirmado. Puedes confirmarlo ejecutando el comando SQL en Supabase o desactivando "Confirm email".');
+        setErrorMsg('Tu correo aún no ha sido confirmado por Supabase. Desactiva "Confirm email" en Authentication > Providers > Email de Supabase o ejecuta la sección 11 de schema.sql para activar todas las cuentas.');
       } else {
         setErrorMsg(err.message || 'Error al autenticar. Intenta nuevamente.');
       }

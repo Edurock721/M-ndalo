@@ -282,6 +282,14 @@ BEGIN
   UPDATE public.profiles
   SET is_verified = p_verified, updated_at = NOW()
   WHERE id = p_owner_id;
+
+  -- Si se aprueba, auto-confirmar el correo en auth.users para que pueda iniciar sesión sin bloqueos
+  IF p_verified THEN
+    UPDATE auth.users
+    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        confirmed_at = COALESCE(confirmed_at, NOW())
+    WHERE id = p_owner_id;
+  END IF;
 END;
 $$;
 
@@ -305,6 +313,14 @@ BEGIN
   UPDATE public.merchants
   SET verified = p_verified, is_active = p_verified
   WHERE owner_id = p_user_id;
+
+  -- Si se aprueba, auto-confirmar el correo en auth.users para que pueda iniciar sesión sin bloqueos
+  IF p_verified THEN
+    UPDATE auth.users
+    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        confirmed_at = COALESCE(confirmed_at, NOW())
+    WHERE id = p_user_id;
+  END IF;
 END;
 $$;
 
@@ -597,7 +613,9 @@ BEGIN
 
   IF v_admin_id IS NOT NULL THEN
     UPDATE auth.users
-    SET raw_user_meta_data = jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{role}', '"admin"')
+    SET raw_user_meta_data = jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{role}', '"admin"'),
+        email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        confirmed_at = COALESCE(confirmed_at, NOW())
     WHERE id = v_admin_id;
 
     INSERT INTO public.profiles (id, email, full_name, first_name, last_name, phone, role, is_verified)
@@ -605,5 +623,58 @@ BEGIN
     ON CONFLICT (id) DO UPDATE SET role = 'admin', is_verified = TRUE, updated_at = NOW();
   END IF;
 END $$;
+
+-- 11. CONFIRMACIÓN AUTOMÁTICA DE CORREOS EN AUTH.USERS (Elimina el bloqueo "Email not confirmed")
+-- Confirma de inmediato todas las cuentas existentes no confirmadas
+UPDATE auth.users
+SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+    confirmed_at = COALESCE(confirmed_at, NOW())
+WHERE email_confirmed_at IS NULL;
+
+-- Trigger para auto-confirmar cualquier nuevo usuario que se registre en el futuro
+CREATE OR REPLACE FUNCTION public.auto_confirm_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = auth, public
+AS $$
+BEGIN
+  NEW.email_confirmed_at := COALESCE(NEW.email_confirmed_at, NOW());
+  NEW.confirmed_at := COALESCE(NEW.confirmed_at, NOW());
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS auto_confirm_user_trigger ON auth.users;
+CREATE TRIGGER auto_confirm_user_trigger
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.auto_confirm_new_user();
+
+-- Función RPC para que el Administrador pueda forzar la confirmación de correos
+CREATE OR REPLACE FUNCTION public.admin_confirm_all_users()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = auth, public
+AS $$
+DECLARE
+  v_count INTEGER;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Solo un administrador puede ejecutar esta acción.';
+  END IF;
+
+  UPDATE auth.users
+  SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+      confirmed_at = COALESCE(confirmed_at, NOW())
+  WHERE email_confirmed_at IS NULL;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_confirm_all_users() TO authenticated;
+
 
 
