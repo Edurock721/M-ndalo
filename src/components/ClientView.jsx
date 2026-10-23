@@ -356,10 +356,9 @@ export function ClientView({
                         soundManager.playTap();
                         onOpenChat(ord);
                       }}
-                      className="btn-outline"
-                      style={{ fontSize: 12.5, padding: '8px 16px' }}
+                      className="btn-outline min-h-[44px] px-4 py-2.5 flex items-center gap-2 font-bold text-sm"
                     >
-                      <MessageSquare size={15} style={{ color: 'var(--brand-orange)' }} />
+                      <MessageSquare size={18} style={{ color: 'var(--brand-orange)' }} />
                       <span>Chat en Vivo</span>
                     </button>
                   </div>
@@ -627,10 +626,9 @@ export function ClientView({
                                 onAddToCart(product, selectedMerchant, itemNote[product.id] || '');
                                 setItemNote(prev => ({ ...prev, [product.id]: '' }));
                               }}
-                              className="btn-brand"
-                              style={{ padding: '6px 14px', fontSize: 12.5 }}
+                              className="btn-brand min-h-[42px] px-5 py-2.5 flex items-center gap-2 text-sm font-extrabold shadow-md shadow-orange-500/20 active:scale-95"
                             >
-                              <Plus size={15} />
+                              <Plus size={18} strokeWidth={2.5} />
                               <span>Agregar</span>
                             </button>
                           </div>
@@ -641,8 +639,11 @@ export function ClientView({
               </div>
             </div>
 
-            <div className="modal-footer">
-              <button onClick={() => setSelectedMerchant(null)} className="btn-outline">
+            <div className="modal-footer flex items-center justify-end p-4 sm:p-5">
+              <button 
+                onClick={() => setSelectedMerchant(null)} 
+                className="btn-outline min-h-[46px] w-full sm:w-auto px-6 font-extrabold text-sm"
+              >
                 Cerrar Menú
               </button>
             </div>

@@ -154,75 +154,108 @@ export function Login() {
           </div>
         </div>
 
-        {/* Panel Desplegable para Pruebas Rápidas (No invade la vista principal) */}
-        <details className="mt-6 border border-slate-800/80 rounded-2xl bg-[#101626]/60 p-4 transition-all">
-          <summary className="text-xs font-bold text-gray-400 cursor-pointer flex items-center justify-between hover:text-gray-200">
-            <span className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400" />
-              Acceso Rápido de Prueba (Simulador)
-            </span>
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          </summary>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 mt-4 pt-3 border-t border-slate-800 text-xs">
+        {/* Panel de Acceso Rápido de Prueba - Grande, Ergonómico y Fácil de Tocar */}
+        <div className="mt-8 bg-[#101626] border border-slate-800 rounded-[28px] p-5 sm:p-7 shadow-2xl">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center flex-shrink-0">
+              <Zap size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
+                Accesos Rápidos de Prueba (Simulador)
+              </h3>
+              <p className="text-xs text-gray-400">
+                Toca cualquier rol para probar el sistema al instante sin escribir credenciales:
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-800/80">
+            {/* Cliente */}
             <button
               type="button"
               onClick={() => {
                 loginAsDemo('client', true);
                 navigate('/cliente');
               }}
-              className="py-2.5 px-3 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-orange-300 font-bold cursor-pointer transition-all text-center"
+              className="p-3.5 rounded-2xl bg-orange-500/15 hover:bg-orange-500/25 border-2 border-orange-500/40 hover:border-orange-500 text-orange-200 hover:text-white transition-all cursor-pointer flex items-center gap-3 min-h-[54px] shadow-sm active:scale-98"
             >
-              👤 Cliente
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black text-lg flex-shrink-0 shadow-md">
+                👤
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-black text-white">Modo Cliente</span>
+                <span className="block text-[11px] text-orange-300/80">Comprar y pedir mandaditos</span>
+              </div>
             </button>
 
+            {/* Taxista / Conductor */}
             <button
               type="button"
               onClick={() => {
                 loginAsDemo('rider', true);
                 navigate('/conductor');
               }}
-              className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold cursor-pointer transition-all text-center"
+              className="p-3.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border-2 border-emerald-500/40 hover:border-emerald-500 text-emerald-200 hover:text-white transition-all cursor-pointer flex items-center gap-3 min-h-[54px] shadow-sm active:scale-98"
             >
-              🏍️ Taxista (Activo)
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black text-lg flex-shrink-0 shadow-md">
+                🏍️
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-black text-white">Taxista / Repartidor</span>
+                <span className="block text-[11px] text-emerald-300/80">Radar de pedidos y carreras</span>
+              </div>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                loginAsDemo('rider', false);
-                navigate('/conductor');
-              }}
-              className="py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-bold cursor-pointer transition-all text-center"
-              title="Prueba la pantalla de espera de validación"
-            >
-              ⏳ Taxista (Espera)
-            </button>
-
+            {/* Comercio Aliado */}
             <button
               type="button"
               onClick={() => {
                 loginAsDemo('merchant', true);
                 navigate('/comercio');
               }}
-              className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold cursor-pointer transition-all text-center"
+              className="p-3.5 rounded-2xl bg-purple-500/15 hover:bg-purple-500/25 border-2 border-purple-500/40 hover:border-purple-500 text-purple-200 hover:text-white transition-all cursor-pointer flex items-center gap-3 min-h-[54px] shadow-sm active:scale-98"
             >
-              🏪 Comercio (Activo)
+              <div className="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center font-black text-lg flex-shrink-0 shadow-md">
+                🏪
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-black text-white">Comercio Aliado</span>
+                <span className="block text-[11px] text-purple-300/80">Gestión de menú y órdenes</span>
+              </div>
             </button>
 
+            {/* Administrador */}
             <button
               type="button"
               onClick={() => {
-                loginAsDemo('merchant', false);
-                navigate('/comercio');
+                loginAsDemo('admin', true);
+                navigate('/admin');
               }}
-              className="py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-bold cursor-pointer transition-all text-center col-span-2"
-              title="Prueba la pantalla de comercio en espera"
+              className="p-3.5 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500/25 border-2 border-cyan-500/40 hover:border-cyan-500 text-cyan-200 hover:text-white transition-all cursor-pointer flex items-center gap-3 min-h-[54px] shadow-sm active:scale-98"
             >
-              ⏳ Comercio (Espera)
+              <div className="w-10 h-10 rounded-xl bg-cyan-500 text-white flex items-center justify-center font-black text-lg flex-shrink-0 shadow-md">
+                🛡️
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-black text-white">Administrador</span>
+                <span className="block text-[11px] text-cyan-300/80">Control total y auditoría</span>
+              </div>
+            </button>
+
+            {/* Conductor / Comercio en Espera */}
+            <button
+              type="button"
+              onClick={() => {
+                loginAsDemo('rider', false);
+                navigate('/conductor');
+              }}
+              className="p-3.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold transition-all cursor-pointer flex items-center justify-center gap-2 col-span-1 sm:col-span-2 text-xs min-h-[46px]"
+            >
+              <span>⏳ Probar Modo Conductor en Espera de Validación</span>
             </button>
           </div>
-        </details>
+        </div>
 
       </div>
     </div>

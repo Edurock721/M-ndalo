@@ -137,14 +137,14 @@ export function Home() {
             </div>
           </div>
 
-          {/* Tasa BCV y Acciones Distribuidas */}
+          {/* Tasa BCV y Acciones Distribuidas con Ergonomía Amplia */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {/* Tasa Oficial BCV - Diseñada para Móvil y PC */}
             <div 
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs shadow-sm"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 text-xs sm:text-sm shadow-sm"
               title="Tasa Oficial del Banco Central de Venezuela auto-actualizada"
             >
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 flex-shrink-0" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
               <span className="text-gray-400 hidden md:inline font-medium text-xs">Tasa BCV:</span>
               <span className="font-mono font-black text-amber-400 text-xs sm:text-sm">
                 Bs. {currentRate.toFixed(2)}
@@ -154,26 +154,26 @@ export function Home() {
             {/* Botón Carrito Prominente y Fácil de Identificar en Móvil y PC */}
             <button
               onClick={() => setShowCartModal(true)}
-              className="relative px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white shadow-lg shadow-orange-500/35 hover:shadow-orange-500/50 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
+              className="relative px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white shadow-lg shadow-orange-500/35 hover:shadow-orange-500/50 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer flex items-center gap-2 border border-white/20 min-h-[44px]"
               title="Ver Carrito de Compras"
             >
               <ShoppingCart className="w-5 h-5 flex-shrink-0 text-white" strokeWidth={2.4} />
-              <span className="text-xs font-black text-white tracking-tight">Carrito</span>
+              <span className="text-xs sm:text-sm font-black text-white tracking-tight">Carrito</span>
               {totalCartItems > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-white text-orange-600 text-[11px] font-black flex items-center justify-center shadow-md animate-pulse ml-0.5 min-w-[18px]">
+                <span className="px-2 py-0.5 rounded-full bg-white text-orange-600 text-xs font-black flex items-center justify-center shadow-md animate-pulse min-w-[20px]">
                   {totalCartItems}
                 </span>
               )}
             </button>
 
-            {/* Cerrar sesión */}
+            {/* Botón Salir Grande y Fácil de Tocar */}
             <button
               onClick={() => signOut()}
-              className="p-2 sm:px-3 sm:py-2.5 rounded-xl bg-gray-900/90 hover:bg-red-500/20 border border-gray-800 hover:border-red-500/40 text-gray-400 hover:text-red-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/35 text-red-300 hover:text-white text-xs sm:text-sm font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 min-h-[44px]"
               title="Cerrar sesión"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Salir</span>
+              <LogOut className="w-5 h-5 text-red-400 flex-shrink-0" strokeWidth={2.3} />
+              <span className="text-xs sm:text-sm font-black">Salir</span>
             </button>
           </div>
         </div>

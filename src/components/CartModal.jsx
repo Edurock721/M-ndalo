@@ -162,40 +162,44 @@ export function CartModal({
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          background: 'rgba(0,0,0,0.3)',
-                          padding: '3px 8px',
+                          gap: 8,
+                          background: 'rgba(0,0,0,0.4)',
+                          border: '1px solid #1E293B',
+                          padding: '4px 8px',
                           borderRadius: 'var(--radius-full)'
                         }}>
                           <button
                             type="button"
                             onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                            style={{ background: 'none', color: 'var(--text-muted)' }}
+                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 flex items-center justify-center text-gray-300 transition-all cursor-pointer"
+                            title="Disminuir cantidad"
                           >
-                            <Minus size={13} />
+                            <Minus size={16} strokeWidth={2.5} />
                           </button>
-                          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 16, textAlign: 'center' }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, minWidth: 20, textAlign: 'center', color: '#FFFFFF' }}>
                             {item.quantity}
                           </span>
                           <button
                             type="button"
                             onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                            style={{ background: 'none', color: 'var(--text-muted)' }}
+                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 flex items-center justify-center text-gray-300 transition-all cursor-pointer"
+                            title="Aumentar cantidad"
                           >
-                            <Plus size={13} />
+                            <Plus size={16} strokeWidth={2.5} />
                           </button>
                         </div>
 
                         <button
                           type="button"
                           onClick={() => onRemoveItem(item.id)}
-                          style={{ background: 'none', color: '#EF4444', padding: 4 }}
+                          className="w-10 h-10 rounded-2xl bg-red-500/10 border border-red-500/25 hover:bg-red-500/20 active:scale-95 flex items-center justify-center text-red-400 transition-all cursor-pointer"
+                          title="Eliminar producto"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={19} />
                         </button>
                       </div>
                     </div>
