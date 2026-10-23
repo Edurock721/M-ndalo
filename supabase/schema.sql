@@ -286,8 +286,7 @@ BEGIN
   -- Si se aprueba, auto-confirmar el correo en auth.users para que pueda iniciar sesión sin bloqueos
   IF p_verified THEN
     UPDATE auth.users
-    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-        confirmed_at = COALESCE(confirmed_at, NOW())
+    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW())
     WHERE id = p_owner_id;
   END IF;
 END;
@@ -317,8 +316,7 @@ BEGIN
   -- Si se aprueba, auto-confirmar el correo en auth.users para que pueda iniciar sesión sin bloqueos
   IF p_verified THEN
     UPDATE auth.users
-    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-        confirmed_at = COALESCE(confirmed_at, NOW())
+    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW())
     WHERE id = p_user_id;
   END IF;
 END;
@@ -614,8 +612,7 @@ BEGIN
   IF v_admin_id IS NOT NULL THEN
     UPDATE auth.users
     SET raw_user_meta_data = jsonb_set(COALESCE(raw_user_meta_data, '{}'::jsonb), '{role}', '"admin"'),
-        email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-        confirmed_at = COALESCE(confirmed_at, NOW())
+        email_confirmed_at = COALESCE(email_confirmed_at, NOW())
     WHERE id = v_admin_id;
 
     INSERT INTO public.profiles (id, email, full_name, first_name, last_name, phone, role, is_verified)
@@ -627,8 +624,7 @@ END $$;
 -- 11. CONFIRMACIÓN AUTOMÁTICA DE CORREOS EN AUTH.USERS (Elimina el bloqueo "Email not confirmed")
 -- Confirma de inmediato todas las cuentas existentes no confirmadas
 UPDATE auth.users
-SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-    confirmed_at = COALESCE(confirmed_at, NOW())
+SET email_confirmed_at = COALESCE(email_confirmed_at, NOW())
 WHERE email_confirmed_at IS NULL;
 
 -- Trigger para auto-confirmar cualquier nuevo usuario que se registre en el futuro
@@ -640,7 +636,6 @@ SET search_path = auth, public
 AS $$
 BEGIN
   NEW.email_confirmed_at := COALESCE(NEW.email_confirmed_at, NOW());
-  NEW.confirmed_at := COALESCE(NEW.confirmed_at, NOW());
   RETURN NEW;
 END;
 $$;
@@ -665,8 +660,7 @@ BEGIN
   END IF;
 
   UPDATE auth.users
-  SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-      confirmed_at = COALESCE(confirmed_at, NOW())
+  SET email_confirmed_at = COALESCE(email_confirmed_at, NOW())
   WHERE email_confirmed_at IS NULL;
 
   GET DIAGNOSTICS v_count = ROW_COUNT;
