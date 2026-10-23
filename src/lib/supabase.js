@@ -261,28 +261,67 @@ class LocalStore {
     return this.products.filter(p => p.merchant_id === merchantId);
   }
 
-  addProduct(productData) {
+  async addProduct(productData) {
     const newProd = {
       id: `prod-${Date.now().toString().slice(-6)}`,
       is_available: true,
+      created_at: new Date().toISOString(),
       ...productData
     };
-    this.products.push(newProd);
+    this.products.unshift(newProd);
     this.saveToStorage();
+
+    try {
+      const { supabase, isSupabaseConfigured } = await import('./supabaseClient');
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase.from('products').insert([{
+          name: newProd.name,
+          description: newProd.description,
+          price: newProd.price,
+          image_url: newProd.image_url,
+          is_available: newProd.is_available ?? true
+        }]).select();
+        if (!error && data?.[0]) {
+          newProd.id = data[0].id;
+          this.saveToStorage();
+        }
+      }
+    } catch (e) {
+      console.warn('Sync addProduct to Supabase skipped:', e);
+    }
+
     return newProd;
   }
 
-  updateProduct(productId, updates) {
+  async updateProduct(productId, updates) {
     const idx = this.products.findIndex(p => p.id === productId);
     if (idx !== -1) {
-      this.products[idx] = { ...this.products[idx], ...updates };
+      this.products[idx] = { ...this.products[idx], ...updates, updated_at: new Date().toISOString() };
       this.saveToStorage();
+
+      try {
+        const { supabase, isSupabaseConfigured } = await import('./supabaseClient');
+        if (isSupabaseConfigured()) {
+          await supabase.from('products').update(updates).eq('id', productId);
+        }
+      } catch (e) {
+        console.warn('Sync updateProduct to Supabase error:', e);
+      }
     }
   }
 
-  deleteProduct(productId) {
+  async deleteProduct(productId) {
     this.products = this.products.filter(p => p.id !== productId);
     this.saveToStorage();
+
+    try {
+      const { supabase, isSupabaseConfigured } = await import('./supabaseClient');
+      if (isSupabaseConfigured()) {
+        await supabase.from('products').delete().eq('id', productId);
+      }
+    } catch (e) {
+      console.warn('Sync deleteProduct to Supabase error:', e);
+    }
   }
 
   // --- Profiles & Admin Wallet API ---

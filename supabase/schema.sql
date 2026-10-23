@@ -339,6 +339,27 @@ CREATE POLICY "Administradores pueden eliminar comercios" ON public.merchants
 DROP POLICY IF EXISTS "Productos públicos" ON public.products;
 CREATE POLICY "Productos públicos" ON public.products FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Comerciantes y Admins pueden insertar productos" ON public.products;
+CREATE POLICY "Comerciantes y Admins pueden insertar productos" ON public.products
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('merchant', 'admin'))
+  );
+
+DROP POLICY IF EXISTS "Comerciantes y Admins pueden actualizar productos" ON public.products;
+CREATE POLICY "Comerciantes y Admins pueden actualizar productos" ON public.products
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('merchant', 'admin'))
+  );
+
+DROP POLICY IF EXISTS "Comerciantes y Admins pueden eliminar productos" ON public.products;
+CREATE POLICY "Comerciantes y Admins pueden eliminar productos" ON public.products
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('merchant', 'admin'))
+  );
+
 -- 8. PERMISOS Y PRIVILEGIOS GLOBALES
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;

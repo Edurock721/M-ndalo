@@ -14,7 +14,11 @@ import {
   DollarSign,
   ToggleLeft,
   ToggleRight,
-  Bell
+  Bell,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
@@ -49,6 +53,20 @@ export function MerchantView({
   const [productImagePreview, setProductImagePreview] = useState(null);
   const [isCompressingProductImg, setIsCompressingProductImg] = useState(false);
 
+  // Edit product state
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editProductForm, setEditProductForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    image_url: '',
+    is_available: true
+  });
+  const [isCompressingEditImg, setIsCompressingEditImg] = useState(false);
+
+  // Delete product confirmation state
+  const [productToDelete, setProductToDelete] = useState(null);
+
   // Filter orders for this merchant
   const merchantOrders = orders.filter((o) => o.merchant_id === merchant?.id);
   const pendingOrders = merchantOrders.filter((o) => o.status === 'pending');
@@ -58,7 +76,7 @@ export function MerchantView({
   // Stats
   const totalSales = completedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
 
-  // Handle product image compress
+  // Handle product image compress for new product
   const handleProductImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -77,14 +95,32 @@ export function MerchantView({
     }
   };
 
+  // Handle product image compress for editing product
+  const handleEditProductImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsCompressingEditImg(true);
+      const res = await compressImageToWebP(file);
+      setEditProductForm(prev => ({ ...prev, image_url: res.dataUrl }));
+      soundManager.playTap();
+    } catch (err) {
+      console.error('Error compressing edit photo:', err);
+      alert('Error al procesar la foto del producto.');
+    } finally {
+      setIsCompressingEditImg(false);
+    }
+  };
+
   const handleCreateProduct = (e) => {
     e.preventDefault();
     if (!newProductForm.name.trim() || !newProductForm.price) return;
 
     onAddProduct({
       merchant_id: merchant.id,
-      name: newProductForm.name,
-      description: newProductForm.description,
+      name: newProductForm.name.trim(),
+      description: newProductForm.description.trim(),
       price: parseFloat(newProductForm.price),
       image_url: newProductForm.image_url
     });
@@ -98,6 +134,42 @@ export function MerchantView({
     });
     setProductImagePreview(null);
     soundManager.playSuccessFanfare();
+  };
+
+  const handleOpenEdit = (prod) => {
+    soundManager.playTap();
+    setEditingProduct(prod);
+    setEditProductForm({
+      name: prod.name || '',
+      description: prod.description || '',
+      price: prod.price !== undefined ? prod.price.toString() : '',
+      image_url: prod.image_url || '',
+      is_available: prod.is_available ?? true
+    });
+  };
+
+  const handleSaveEditProduct = (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    if (!editProductForm.name.trim() || !editProductForm.price) return;
+
+    onUpdateProduct(editingProduct.id, {
+      name: editProductForm.name.trim(),
+      description: editProductForm.description.trim(),
+      price: parseFloat(editProductForm.price),
+      image_url: editProductForm.image_url,
+      is_available: editProductForm.is_available
+    });
+
+    setEditingProduct(null);
+    soundManager.playSuccessFanfare();
+  };
+
+  const handleConfirmDelete = () => {
+    if (!productToDelete) return;
+    onDeleteProduct(productToDelete.id);
+    setProductToDelete(null);
+    soundManager.playTap();
   };
 
   return (
@@ -410,36 +482,106 @@ export function MerchantView({
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 18 }}>
             {products
-              .filter((p) => p.merchant_id === merchant.id)
+              .filter((p) => p.merchant_id === merchant?.id || p.merchant_id === merchant?.owner_id || (!p.merchant_id && merchant?.id === 'merch-1'))
               .map((prod) => (
-                <div key={prod.id} className="glass-panel" style={{ padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <img
-                    src={prod.image_url}
-                    alt={prod.name}
-                    onError={(e) => handleImageError(e, 'product')}
-                    style={{ width: 68, height: 68, borderRadius: 8, objectFit: 'cover' }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h5 style={{ fontSize: 14, marginBottom: 2 }}>{prod.name}</h5>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 15, color: 'var(--brand-orange)' }}>
-                        ${prod.price.toFixed(2)}
-                      </strong>
-                      <span style={{ fontSize: 11.5, fontWeight: 700, color: '#FBBF24' }}>
-                        · {formatBs(prod.price)}
+                <div 
+                  key={prod.id} 
+                  className="glass-panel" 
+                  style={{ 
+                    padding: 16, 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    borderRadius: 20,
+                    background: '#0E1526',
+                    border: '1.5px solid #233352'
+                  }}
+                >
+                  {/* Imagen del plato con badge de disponibilidad */}
+                  <div style={{ position: 'relative', height: 160, borderRadius: 14, overflow: 'hidden', marginBottom: 14, background: '#141E33' }}>
+                    <img
+                      src={prod.image_url}
+                      alt={prod.name}
+                      onError={(e) => handleImageError(e, 'product')}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <span 
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        padding: '4px 10px',
+                        borderRadius: 10,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        background: prod.is_available ? 'rgba(16, 185, 129, 0.9)' : 'rgba(239, 68, 68, 0.9)',
+                        color: '#FFFFFF',
+                        backdropFilter: 'blur(6px)'
+                      }}
+                    >
+                      {prod.is_available ? '● Disponible' : '○ Agotado'}
+                    </span>
+                  </div>
+
+                  {/* Datos del producto */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <h4 style={{ fontSize: 16, fontWeight: 800, color: '#FFFFFF', marginBottom: 4 }}>
+                      {prod.name}
+                    </h4>
+                    <p style={{ fontSize: 12.5, color: '#94A3B8', marginBottom: 12, lineHeight: 1.4, flex: 1 }}>
+                      {prod.description || 'Sin descripción detallada.'}
+                    </p>
+
+                    {/* Precios en USD y Bs */}
+                    <div style={{ 
+                      padding: '8px 12px', 
+                      borderRadius: 12, 
+                      background: '#141E34', 
+                      border: '1px solid #253554', 
+                      marginBottom: 14,
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--brand-orange)' }}>
+                        ${Number(prod.price || 0).toFixed(2)} USD
+                      </span>
+                      <span style={{ fontSize: 12.5, fontWeight: 800, color: '#FBBF24' }}>
+                        {formatBs(prod.price)}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                      <span style={{ fontSize: 11, color: prod.is_available ? '#10B981' : '#EF4444' }}>
-                        {prod.is_available ? '● Disponible' : '○ Agotado'}
-                      </span>
+
+                    {/* Barra de Acciones: Disponibilidad, Editar, Eliminar */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 8 }}>
                       <button
+                        type="button"
                         onClick={() => onUpdateProduct(prod.id, { is_available: !prod.is_available })}
-                        style={{ background: 'none', color: 'var(--text-muted)', fontSize: 12 }}
+                        className="btn-outline"
+                        style={{ padding: '8px 12px', fontSize: 12, height: 42 }}
+                        title="Cambiar disponibilidad"
                       >
-                        Cambiar estado
+                        {prod.is_available ? 'Pausar' : 'Activar'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(prod)}
+                        className="btn-info"
+                        style={{ height: 42, fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        <Pencil size={14} />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setProductToDelete(prod)}
+                        className="btn-danger"
+                        style={{ height: 42, padding: '0 12px' }}
+                        title="Eliminar producto del menú"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
@@ -567,6 +709,208 @@ export function MerchantView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  color: '#60A5FA',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Pencil size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 17 }}>Editar Producto del Menú</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    Actualiza el precio, descripción, disponibilidad y foto
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setEditingProduct(null)} className="btn-icon">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditProduct}>
+              <div className="modal-body">
+                <div className="input-group">
+                  <label className="input-label">Nombre del Producto *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editProductForm.name}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })}
+                    className="input-field"
+                    placeholder="Ej: Hamburguesa Doble con Queso"
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Descripción & Ingredientes</label>
+                  <textarea
+                    rows={2}
+                    value={editProductForm.description}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })}
+                    className="input-field"
+                    placeholder="Ingredientes, acompañamientos o tamaño..."
+                    style={{ height: 'auto', padding: '10px 14px' }}
+                  />
+                </div>
+
+                <div className="input-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="input-label">Precio en Dólares ($) *</label>
+                    <span style={{ fontSize: 12, color: '#FBBF24', fontWeight: 800 }}>
+                      Equivale a: {formatBs(parseFloat(editProductForm.price) || 0)}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="0.5"
+                    required
+                    value={editProductForm.price}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })}
+                    className="input-field"
+                    placeholder="6.50"
+                  />
+                </div>
+
+                {/* Disponibilidad toggle */}
+                <div className="input-group" style={{ marginBottom: 16 }}>
+                  <label className="input-label">Disponibilidad en el Catálogo</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditProductForm({ ...editProductForm, is_available: !editProductForm.is_available })}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: 14,
+                      background: editProductForm.is_available ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                      border: editProductForm.is_available ? '1.5px solid rgba(16, 185, 129, 0.4)' : '1.5px solid rgba(239, 68, 68, 0.4)',
+                      color: editProductForm.is_available ? '#34D399' : '#F87171',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, fontSize: 13 }}>
+                      {editProductForm.is_available ? '● Producto Disponible para Clientes' : '○ Producto Marcado como Agotado'}
+                    </span>
+                    <span style={{ fontSize: 12, textDecoration: 'underline' }}>
+                      {editProductForm.is_available ? 'Desactivar' : 'Activar'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Photo uploader with WebP compression */}
+                <div className="input-group">
+                  <label className="input-label">Foto del Plato (Auto WebP &lt; 120KB)</label>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: 12,
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px dashed var(--border-subtle)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: 'var(--text-muted)'
+                  }}>
+                    <UploadCloud size={18} style={{ color: 'var(--brand-orange)' }} />
+                    <span>{isCompressingEditImg ? 'Comprimiendo a WebP...' : 'Cambiar foto desde galería o cámara'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleEditProductImageUpload}
+                    />
+                  </label>
+
+                  {editProductForm.image_url && (
+                    <div style={{ marginTop: 10, textAlign: 'center' }}>
+                      <img
+                        src={editProductForm.image_url}
+                        alt="Preview"
+                        onError={(e) => handleImageError(e, 'product')}
+                        style={{ maxHeight: 130, borderRadius: 10, objectFit: 'cover', margin: '0 auto', border: '1px solid var(--border-subtle)' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setEditingProduct(null)} className="btn-outline">
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-brand">
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Product Confirmation Modal */}
+      {productToDelete && (
+        <div className="modal-overlay" style={{ zIndex: 60 }}>
+          <div className="modal-content" style={{ maxWidth: 440, padding: 24, textAlign: 'center' }}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '2px solid rgba(239, 68, 68, 0.4)',
+              color: '#EF4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <Trash2 size={26} />
+            </div>
+
+            <h3 style={{ fontSize: 19, fontWeight: 900, marginBottom: 8 }}>
+              ¿Eliminar "{productToDelete.name}"?
+            </h3>
+            <p style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.5, marginBottom: 20 }}>
+              Este producto se retirará inmediatamente del catálogo y los clientes ya no podrán seleccionarlo. Esta acción no se puede deshacer.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setProductToDelete(null)}
+                className="btn-outline"
+                style={{ height: 46 }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="btn-danger"
+                style={{ height: 46, fontWeight: 800 }}
+              >
+                Sí, Eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}

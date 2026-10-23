@@ -69,23 +69,21 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.open(IMAGES_CACHE).then((cache) => {
         return cache.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            // Servido 100% desde almacenamiento local (Costo $0, ultra rápido)
-            return cachedResponse;
-          }
-
-          // Si no está en caché, descargarlo una sola vez y guardarlo en el disco del celular/PC
-          return fetch(event.request).then((networkResponse) => {
+          // Revalidación en segundo plano: si el comerciante cambió la foto, se descarga la nueva versión y se actualiza la caché
+          const fetchPromise = fetch(event.request).then((networkResponse) => {
             if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;
           }).catch(() => {
-            // Si falla la red (sin conexión), retornar el SVG local de respaldo
-            return new Response(FALLBACK_SVG_IMAGE, {
+            // Si la red falla y no había nada en caché, devolver SVG de respaldo
+            return cachedResponse || new Response(FALLBACK_SVG_IMAGE, {
               headers: { 'Content-Type': 'image/svg+xml' }
             });
           });
+
+          // Si ya existe en caché, entregarla al instante (0ms de espera); si no, esperar la descarga de red
+          return cachedResponse || fetchPromise;
         });
       })
     );
