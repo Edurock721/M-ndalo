@@ -92,9 +92,10 @@ export function AdminPortal() {
 
         if (error) throw error;
         if (merchantError) console.warn('AdminPortal: No se pudieron cargar los planes de comercios:', merchantError);
+        const loadedMerchants = merchantData || [];
+        loadedMerchants.forEach(merchant => localStore.upsertMerchant(merchant));
+
         if (data) {
-          const loadedMerchants = merchantData || [];
-          loadedMerchants.forEach(merchant => localStore.upsertMerchant(merchant));
           data.forEach(p => {
             const merchant = loadedMerchants.find(item => item.owner_id === p.id);
             localStore.updateProfile(p.id, {
@@ -110,6 +111,32 @@ export function AdminPortal() {
             });
           });
         }
+
+        // Asegurarse de que cualquier comercio de Supabase esté presente en profiles para su gestión
+        loadedMerchants.forEach(m => {
+          if (m.owner_id) {
+            const currentProfile = localStore.profiles.find(p => p.id === m.owner_id);
+            if (!currentProfile) {
+              localStore.updateProfile(m.owner_id, {
+                id: m.owner_id,
+                full_name: m.name,
+                merchant_name: m.name,
+                phone: m.phone,
+                address: m.address,
+                role: 'merchant',
+                merchant_id: m.id,
+                is_verified: m.verified ?? m.is_active ?? false,
+                verified: m.verified ?? m.is_active ?? false
+              });
+            } else {
+              localStore.updateProfile(m.owner_id, {
+                merchant_id: m.id,
+                is_verified: m.verified ?? m.is_active ?? currentProfile.is_verified ?? false,
+                verified: m.verified ?? m.is_active ?? currentProfile.is_verified ?? false
+              });
+            }
+          }
+        });
       } catch (err) {
         console.warn('AdminPortal: No se pudieron sincronizar perfiles de Supabase:', err);
       }

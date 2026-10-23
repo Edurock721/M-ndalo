@@ -181,65 +181,82 @@ export function AuthProvider({ children }) {
 
   // Actualizar estado de verificación de un usuario (para Administrador)
   const updateUserVerification = async (userId, isVerified, role) => {
+    let cloudSynced = false;
+    let cloudError = null;
+
     // Si es un ID de Supabase válido y Supabase está configurado, sincronizar con la nube
     if (isConfigured && isValidUuid(userId)) {
       try {
-        // 1. Intentar actualizar en public.profiles
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
-          .eq('id', userId);
-
-        if (profileError) {
-          console.warn('Advertencia actualizando profiles en Supabase:', profileError.message || profileError);
-          // Si el trigger o RLS restringe el update directo, intentar mediante RPC segura si existe
-          try {
-            await supabase.rpc('admin_set_user_verified', {
-              p_user_id: userId,
-              p_verified: isVerified
-            });
-          } catch (_) {}
-        }
-
-        // 2. Si es comercio, sincronizar también la tabla public.merchants
+        // 1. Si es comercio, ejecutar RPC específico admin_set_merchant_verified
         if (role === 'merchant') {
-          let rpcSuccess = false;
           try {
             const { error: merchantRpcError } = await supabase.rpc('admin_set_merchant_verified', {
               p_owner_id: userId,
               p_verified: isVerified
             });
             if (!merchantRpcError) {
-              rpcSuccess = true;
+              cloudSynced = true;
             } else {
-              console.warn('RPC admin_set_merchant_verified no disponible:', merchantRpcError.message || merchantRpcError);
+              console.warn('RPC admin_set_merchant_verified no disponible o con error:', merchantRpcError.message || merchantRpcError);
+              cloudError = merchantRpcError.message;
             }
           } catch (rpcErr) {
             console.warn('Excepción al invocar RPC admin_set_merchant_verified:', rpcErr);
+            cloudError = rpcErr.message;
           }
 
           // Fallback directo a la tabla merchants si la función RPC aún no está en Supabase
-          if (!rpcSuccess) {
+          if (!cloudSynced) {
             try {
               const { error: directErr } = await supabase
                 .from('merchants')
                 .update({ is_active: isVerified, verified: isVerified })
                 .eq('owner_id', userId);
 
-              if (directErr) {
+              if (!directErr) {
+                cloudSynced = true;
+              } else {
                 // Si la columna verified aún no fue migrada, actualizar sólo is_active
-                await supabase
+                const { error: isActErr } = await supabase
                   .from('merchants')
                   .update({ is_active: isVerified })
                   .eq('owner_id', userId);
+                if (!isActErr) cloudSynced = true;
+                else cloudError = isActErr.message || directErr.message;
               }
             } catch (fallbackErr) {
-              console.warn('Fallback update en merchants:', fallbackErr);
+              console.warn('Fallback update en merchants falló:', fallbackErr);
             }
           }
         }
+
+        // 2. Intentar actualizar en public.profiles (o vía admin_set_user_verified)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+
+        if (!profileError) {
+          cloudSynced = true;
+        } else {
+          console.warn('Advertencia actualizando profiles:', profileError.message || profileError);
+          try {
+            const { error: rpcUserErr } = await supabase.rpc('admin_set_user_verified', {
+              p_user_id: userId,
+              p_verified: isVerified
+            });
+            if (!rpcUserErr) cloudSynced = true;
+            else if (!cloudSynced) cloudError = profileError.message || rpcUserErr.message;
+          } catch (_) {}
+        }
+
+        if (!cloudSynced && cloudError) {
+          console.error('No se pudo persistir el cambio en Supabase:', cloudError);
+          throw new Error(`No se pudo guardar en Supabase: ${cloudError}. Por favor ejecuta el script SQL en Supabase para habilitar permisos.`);
+        }
       } catch (e) {
         console.error('Error general actualizando verificación en Supabase:', e);
+        throw e;
       }
     }
 

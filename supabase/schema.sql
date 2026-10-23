@@ -269,7 +269,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+  IF auth.uid() IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
     RAISE EXCEPTION 'Solo un administrador puede validar comercios.';
   END IF;
   
@@ -299,7 +299,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+  IF auth.uid() IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
     RAISE EXCEPTION 'Solo un administrador puede cambiar la verificación.';
   END IF;
 
@@ -322,8 +322,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.admin_set_merchant_verified(UUID, BOOLEAN) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_set_user_verified(UUID, BOOLEAN) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_set_merchant_verified(UUID, BOOLEAN) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.admin_set_user_verified(UUID, BOOLEAN) TO authenticated, anon;
 
 -- 4. TABLA DE PRODUCTOS
 CREATE TABLE IF NOT EXISTS public.products (
