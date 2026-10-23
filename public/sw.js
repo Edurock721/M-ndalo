@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mandalo-cache-v2';
+const CACHE_NAME = 'mandalo-cache-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -41,6 +41,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-First for HTML navigation so GitHub Pages updates are seen immediately
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request) || caches.match('./index.html') || caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Cache-first with network fallback for static hashed assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
