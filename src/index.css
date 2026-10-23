@@ -663,3 +663,51 @@ textarea.input-field {
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* ==========================================================================
+   Mobile-First Ergonomics & Touch Target Optimizations (360px - 640px)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-height: 94vh;
+    border-radius: 24px 24px 16px 16px;
+    width: 100%;
+  }
+
+  .modal-header {
+    padding: 16px 18px;
+  }
+
+  .modal-body {
+    padding: 16px 18px;
+  }
+
+  .modal-footer {
+    padding: 14px 18px;
+  }
+
+  .btn-brand, .btn-outline, .btn-success, .btn-danger, .btn-info {
+    min-height: 48px;
+    font-size: 13.5px;
+    padding: 10px 16px;
+  }
+
+  .input-field {
+    min-height: 48px;
+    font-size: 14px;
+  }
+
+  .input-group {
+    margin-bottom: 16px;
+  }
+
+  .glass-panel {
+    border-radius: 18px;
+  }
+}
+

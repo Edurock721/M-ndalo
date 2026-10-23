@@ -462,24 +462,34 @@ export function MerchantView({
       {/* Tab: Catalog Management */}
       {activeTab === 'catalog' && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div>
-              <h3 style={{ fontSize: 18 }}>Gestión de Menú e Inventario</h3>
-              <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-                Agrega platos, actualiza precios y fotos comprimidas a WebP
-              </p>
-            </div>
+          {/* Header del Catálogo con Espaciado Responsivo y Botón Grande */}
+          <div className="bg-[#0D1424] border border-[#233352] rounded-3xl p-5 sm:p-6 shadow-xl mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold mb-1.5">
+                  <Package size={14} />
+                  Gestión de Menú e Inventario
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Tus Productos y Catálogo Digital
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-300">
+                  Agrega platos, actualiza precios, controla disponibilidad y fotos en WebP
+                </p>
+              </div>
 
-            <button
-              onClick={() => {
-                soundManager.playTap();
-                setShowAddProductModal(true);
-              }}
-              className="btn-brand"
-            >
-              <Plus size={16} />
-              <span>Nuevo Producto</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setShowAddProductModal(true);
+                }}
+                className="btn-brand w-full sm:w-auto min-h-[48px] shadow-lg shadow-orange-500/25 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                <span>+ Agregar Nuevo Producto</span>
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 18 }}>

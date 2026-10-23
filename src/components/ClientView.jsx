@@ -193,17 +193,27 @@ export function ClientView({
             Pide en tus tiendas locales favoritas con catálogo digital o solicita un mandadito particular punto a punto sin intermediarios.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {/* 3 Botones de Acción Rápida - Grid Responsivo Móvil/PC */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full mt-5">
             <button
               onClick={() => {
                 soundManager.playTap();
                 const el = document.getElementById('comercios-section');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="btn-brand"
+              className="p-4 rounded-2xl bg-[#141F38]/90 hover:bg-[#1A284A] border-2 border-orange-500/40 hover:border-orange-500 text-left transition-all shadow-lg hover:shadow-orange-500/20 flex items-center sm:flex-col sm:items-start justify-between sm:justify-center gap-3 cursor-pointer group"
             >
-              <Store size={18} />
-              <span>Explorar Comercios</span>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-orange-500/40 group-hover:scale-105 transition-transform flex-shrink-0">
+                <Store size={22} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-base font-black text-white group-hover:text-orange-400 transition-colors">
+                  Explorar Comercios
+                </span>
+                <span className="block text-xs text-gray-300 font-medium truncate sm:whitespace-normal">
+                  Restaurantes, farmacias y tiendas
+                </span>
+              </div>
             </button>
 
             <button
@@ -217,25 +227,19 @@ export function ClientView({
                 }));
                 setShowMandaditoModal(true);
               }}
-              style={{
-                background: 'linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%)',
-                color: '#000000',
-                fontWeight: 800,
-                fontSize: 14,
-                padding: '12px 22px',
-                borderRadius: 14,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                boxShadow: '0 4px 16px rgba(0, 242, 254, 0.35)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
+              className="p-4 rounded-2xl bg-[#141F38]/90 hover:bg-[#1A284A] border-2 border-cyan-500/40 hover:border-cyan-400 text-left transition-all shadow-lg hover:shadow-cyan-500/20 flex items-center sm:flex-col sm:items-start justify-between sm:justify-center gap-3 cursor-pointer group"
             >
-              <Bike size={18} />
-              <span>Pedir Mandadito / Carga</span>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-400 to-blue-500 text-black flex items-center justify-center shadow-md shadow-cyan-500/40 group-hover:scale-105 transition-transform flex-shrink-0">
+                <Bike size={22} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-base font-black text-white group-hover:text-cyan-300 transition-colors">
+                  Pedir Mandadito / Carga
+                </span>
+                <span className="block text-xs text-gray-300 font-medium truncate sm:whitespace-normal">
+                  Diligencias y encomiendas express
+                </span>
+              </div>
             </button>
 
             <button
@@ -249,25 +253,19 @@ export function ClientView({
                 }));
                 setShowMandaditoModal(true);
               }}
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: 14,
-                padding: '12px 22px',
-                borderRadius: 14,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                boxShadow: '0 4px 16px rgba(59, 130, 246, 0.35)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
+              className="p-4 rounded-2xl bg-[#141F38]/90 hover:bg-[#1A284A] border-2 border-blue-500/40 hover:border-blue-400 text-left transition-all shadow-lg hover:shadow-blue-500/20 flex items-center sm:flex-col sm:items-start justify-between sm:justify-center gap-3 cursor-pointer group"
             >
-              <User size={18} />
-              <span>Pedir Carrera / Taxi</span>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/40 group-hover:scale-105 transition-transform flex-shrink-0">
+                <User size={22} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-base font-black text-white group-hover:text-blue-300 transition-colors">
+                  Pedir Carrera / Taxi
+                </span>
+                <span className="block text-xs text-gray-300 font-medium truncate sm:whitespace-normal">
+                  Mototaxi y traslados seguros
+                </span>
+              </div>
             </button>
           </div>
         </div>
@@ -374,63 +372,68 @@ export function ClientView({
 
       {/* Comercios Aliados Section */}
       <div id="comercios-section">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-          <div>
-            <h3 style={{ fontSize: 22, fontWeight: 900, color: '#FFFFFF' }}>Comercios Locales Aliados</h3>
-            <p style={{ fontSize: 13.5, color: '#94A3B8' }}>Compra directo sin comisiones abusivas</p>
+        {/* Panel de Búsqueda y Filtros de Comercios con Espaciado Ejecutivo */}
+        <div className="bg-[#0D1424] border border-[#233352] rounded-3xl p-5 sm:p-7 shadow-xl space-y-5 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-bold mb-1.5">
+                <Store size={14} />
+                Comercios Locales Aliados
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Explora Tiendas y Restaurantes
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-300">
+                Compra directo con catálogo digital transparente y delivery en tu zona
+              </p>
+            </div>
+            <div className="text-xs text-gray-400 font-medium">
+              <span className="font-bold text-white font-mono text-sm">{filteredMerchants.length}</span> comercios activos
+            </div>
           </div>
 
-          {/* Search bar */}
-          <div style={{
-            position: 'relative',
-            flex: '1 1 280px',
-            maxWidth: 380
-          }}>
-            <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+          {/* Buscador a Ancho Completo con Espaciado Generoso y Botón de Limpiar */}
+          <div className="relative w-full">
+            <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Buscar tienda, comida o medicina..."
+              placeholder="Buscar tienda, comida, farmacia o artículo por nombre..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field"
-              style={{ paddingLeft: 46, borderRadius: 16, height: 48, fontSize: 13.5 }}
+              className="w-full h-13 sm:h-14 bg-[#141F38] border-2 border-[#2B3D5D] focus:border-orange-500 rounded-2xl pl-12 pr-12 text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none transition-all shadow-inner"
             />
+            {searchQuery && (
+              <button 
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
-        </div>
 
-        {/* Category Pills */}
-        <div style={{
-          display: 'flex',
-          gap: 10,
-          overflowX: 'auto',
-          paddingBottom: 10,
-          marginBottom: 24,
-          WebkitOverflowScrolling: 'touch'
-        }}>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => {
-                soundManager.playTap();
-                setSelectedCategory(cat);
-              }}
-              style={{
-                padding: '9px 18px',
-                borderRadius: 14,
-                fontSize: 13.5,
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-                background: selectedCategory === cat ? 'var(--brand-gradient)' : '#141F38',
-                color: selectedCategory === cat ? '#FFFFFF' : '#CBD5E1',
-                border: selectedCategory === cat ? '1px solid rgba(255,255,255,0.3)' : '1.5px solid #2B3D5D',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: selectedCategory === cat ? '0 4px 14px rgba(255, 94, 54, 0.35)' : 'none'
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+          {/* Categorías como Filtros Horizontales Espaciados y con Scroll Suave */}
+          <div className="flex gap-2.5 overflow-x-auto pb-1 pt-1">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setSelectedCategory(cat);
+                }}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+                  selectedCategory === cat
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 scale-[1.02]'
+                    : 'bg-[#141F38] text-gray-300 hover:text-white hover:bg-[#1A284A] border border-[#2B3D5D]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Merchants Grid */}
@@ -692,7 +695,7 @@ export function ClientView({
                   <label className="input-label" style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, display: 'block' }}>
                     ¿Qué vas a trasladar?
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {/* Persona(s) */}
                     <button
                       type="button"
@@ -705,20 +708,19 @@ export function ClientView({
                           passenger_count: prev.passenger_count || 1
                         }));
                       }}
-                      style={{
-                        padding: '12px 6px',
-                        borderRadius: 'var(--radius-md)',
-                        textAlign: 'center',
-                        border: mandaditoForm.order_type === 'ride' ? '2px solid #3B82F6' : '1px solid var(--border-subtle)',
-                        background: mandaditoForm.order_type === 'ride' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(255, 255, 255, 0.03)',
-                        color: mandaditoForm.order_type === 'ride' ? '#60A5FA' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
+                      className={`p-3.5 sm:p-4 rounded-2xl text-left sm:text-center border-2 transition-all cursor-pointer flex items-center sm:flex-col justify-start sm:justify-center gap-3 ${
+                        mandaditoForm.order_type === 'ride'
+                          ? 'border-blue-500 bg-blue-500/20 text-blue-300 shadow-md shadow-blue-500/20'
+                          : 'border-[#2B3D5D] bg-[#141F38] text-gray-300 hover:border-gray-600'
+                      }`}
                     >
-                      <User size={20} style={{ margin: '0 auto 4px', display: 'block' }} />
-                      <strong style={{ fontSize: 12, display: 'block' }}>Persona(s)</strong>
-                      <span style={{ fontSize: 10, opacity: 0.8 }}>Carrera / Taxi</span>
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-400 flex items-center justify-center flex-shrink-0 sm:mx-auto">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <strong className="text-sm font-black text-white block">Persona(s)</strong>
+                        <span className="text-xs text-gray-400 block">Carrera / Mototaxi</span>
+                      </div>
                     </button>
 
                     {/* Paquete Ligero */}
@@ -733,20 +735,19 @@ export function ClientView({
                           passenger_count: 0
                         }));
                       }}
-                      style={{
-                        padding: '12px 6px',
-                        borderRadius: 'var(--radius-md)',
-                        textAlign: 'center',
-                        border: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
-                        background: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
-                        color: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small' ? '#34D399' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
+                      className={`p-3.5 sm:p-4 rounded-2xl text-left sm:text-center border-2 transition-all cursor-pointer flex items-center sm:flex-col justify-start sm:justify-center gap-3 ${
+                        mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'small'
+                          ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-md shadow-emerald-500/20'
+                          : 'border-[#2B3D5D] bg-[#141F38] text-gray-300 hover:border-gray-600'
+                      }`}
                     >
-                      <Package size={20} style={{ margin: '0 auto 4px', display: 'block' }} />
-                      <strong style={{ fontSize: 12, display: 'block' }}>Paquete ligero</strong>
-                      <span style={{ fontSize: 10, opacity: 0.8 }}>Sobre / Comida</span>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center flex-shrink-0 sm:mx-auto">
+                        <Package size={20} />
+                      </div>
+                      <div>
+                        <strong className="text-sm font-black text-white block">Paquete ligero</strong>
+                        <span className="text-xs text-gray-400 block">Sobre / Comida</span>
+                      </div>
                     </button>
 
                     {/* Carga Pesada */}
@@ -761,20 +762,19 @@ export function ClientView({
                           passenger_count: 0
                         }));
                       }}
-                      style={{
-                        padding: '12px 6px',
-                        borderRadius: 'var(--radius-md)',
-                        textAlign: 'center',
-                        border: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' ? '2px solid #F59E0B' : '1px solid var(--border-subtle)',
-                        background: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.03)',
-                        color: mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy' ? '#FBBF24' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
+                      className={`p-3.5 sm:p-4 rounded-2xl text-left sm:text-center border-2 transition-all cursor-pointer flex items-center sm:flex-col justify-start sm:justify-center gap-3 ${
+                        mandaditoForm.order_type === 'mandadito' && mandaditoForm.cargo_size === 'heavy'
+                          ? 'border-amber-500 bg-amber-500/20 text-amber-300 shadow-md shadow-amber-500/20'
+                          : 'border-[#2B3D5D] bg-[#141F38] text-gray-300 hover:border-gray-600'
+                      }`}
                     >
-                      <AlertTriangle size={20} style={{ margin: '0 auto 4px', display: 'block' }} />
-                      <strong style={{ fontSize: 12, display: 'block' }}>Carga pesada</strong>
-                      <span style={{ fontSize: 10, opacity: 0.8 }}>Repuesto / Bultos</span>
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center flex-shrink-0 sm:mx-auto">
+                        <AlertTriangle size={20} />
+                      </div>
+                      <div>
+                        <strong className="text-sm font-black text-white block">Carga pesada</strong>
+                        <span className="text-xs text-gray-400 block">Repuesto / Bultos</span>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -1057,13 +1057,17 @@ export function ClientView({
                 })()}
               </div>
 
-              <div className="modal-footer">
-                <button type="button" onClick={() => setShowMandaditoModal(false)} className="btn-outline">
+              <div className="modal-footer flex flex-col-reverse sm:flex-row gap-3 w-full p-4 sm:p-5">
+                <button 
+                  type="button" 
+                  onClick={() => setShowMandaditoModal(false)} 
+                  className="btn-outline w-full sm:w-auto min-h-[48px]"
+                >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="btn-brand"
+                  className="btn-brand w-full sm:w-auto min-h-[48px] font-extrabold text-sm sm:text-base flex-1"
                   style={{
                     background: mandaditoForm.order_type === 'ride'
                       ? 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'

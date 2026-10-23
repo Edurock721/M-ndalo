@@ -191,103 +191,91 @@ export function RiderView({
             </p>
           </div>
 
-          {/* Quick Filter Toggles - Driver Decision Controls */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
-            padding: '16px 20px',
-            borderRadius: 20,
-            background: '#0E1526',
-            border: '1.5px solid #233352',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 800, color: '#94A3B8', marginRight: 6 }}>
-              <SlidersHorizontal size={16} style={{ color: 'var(--brand-orange)' }} />
-              <span>FILTROS RÁPIDOS:</span>
+          {/* Quick Filter Controls - Panel de Control y Filtros de Servicios con Espaciado Ejecutivo */}
+          <div className="bg-[#0D1424] border border-[#233352] rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={16} className="text-orange-400" />
+                <span className="text-xs font-black uppercase tracking-wider text-gray-200">
+                  Filtros Rápidos del Radar
+                </span>
+              </div>
+              <span className="text-xs text-gray-400 font-medium">
+                Selecciona qué tipos de servicios deseas tomar en tu zona
+              </span>
             </div>
 
-            {/* Toggle Carreras */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playTap();
-                setShowRides(!showRides);
-              }}
-              style={{
-                cursor: 'pointer',
-                padding: '8px 16px',
-                borderRadius: 12,
-                border: showRides ? '1.5px solid rgba(59, 130, 246, 0.6)' : '1.5px solid #2B3D5D',
-                background: showRides ? 'rgba(59, 130, 246, 0.22)' : '#141F38',
-                color: showRides ? '#93C5FD' : '#94A3B8',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 800,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>{showRides ? '☑' : '☐'}</span>
-              <User size={15} />
-              <span>Ver Carreras / Pasajeros ({ridesCount})</span>
-            </button>
+            {/* 3 Botones de Filtro en Grid Responsivo */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Toggle Carreras */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setShowRides(!showRides);
+                }}
+                className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between sm:justify-center gap-3 ${
+                  showRides
+                    ? 'border-blue-500 bg-blue-500/20 text-blue-200 shadow-md shadow-blue-500/20 font-black'
+                    : 'border-[#2B3D5D] bg-[#141F38] text-gray-400 hover:border-gray-600 font-bold'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">{showRides ? '☑' : '☐'}</span>
+                  <User size={16} className={showRides ? 'text-blue-400' : 'text-gray-400'} />
+                  <span className="text-xs sm:text-sm">Carreras / Pasajeros</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${showRides ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-400'}`}>
+                  {ridesCount}
+                </span>
+              </button>
 
-            {/* Toggle Encomiendas / Compras */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playTap();
-                setShowPackages(!showPackages);
-              }}
-              style={{
-                cursor: 'pointer',
-                padding: '8px 16px',
-                borderRadius: 12,
-                border: showPackages ? '1.5px solid rgba(16, 185, 129, 0.6)' : '1.5px solid #2B3D5D',
-                background: showPackages ? 'rgba(16, 185, 129, 0.22)' : '#141F38',
-                color: showPackages ? '#6EE7B7' : '#94A3B8',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 800,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>{showPackages ? '☑' : '☐'}</span>
-              <Package size={15} />
-              <span>Ver Encomiendas / Compras ({packagesCount})</span>
-            </button>
+              {/* Toggle Encomiendas / Compras */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setShowPackages(!showPackages);
+                }}
+                className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between sm:justify-center gap-3 ${
+                  showPackages
+                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-200 shadow-md shadow-emerald-500/20 font-black'
+                    : 'border-[#2B3D5D] bg-[#141F38] text-gray-400 hover:border-gray-600 font-bold'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">{showPackages ? '☑' : '☐'}</span>
+                  <Package size={16} className={showPackages ? 'text-emerald-400' : 'text-gray-400'} />
+                  <span className="text-xs sm:text-sm">Encomiendas / Compras</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${showPackages ? 'bg-emerald-500 text-white' : 'bg-gray-800 text-gray-400'}`}>
+                  {packagesCount}
+                </span>
+              </button>
 
-            {/* Toggle Cargas Pesadas */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playTap();
-                setShowHeavy(!showHeavy);
-              }}
-              style={{
-                cursor: 'pointer',
-                padding: '8px 16px',
-                borderRadius: 12,
-                border: showHeavy ? '1.5px solid rgba(245, 158, 11, 0.6)' : '1.5px solid #2B3D5D',
-                background: showHeavy ? 'rgba(245, 158, 11, 0.22)' : '#141F38',
-                color: showHeavy ? '#FCD34D' : '#94A3B8',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 800,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>{showHeavy ? '☑' : '☐'}</span>
-              <AlertTriangle size={15} />
-              <span>Ver Cargas pesadas ({heavyCount})</span>
-            </button>
+              {/* Toggle Cargas Pesadas */}
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setShowHeavy(!showHeavy);
+                }}
+                className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between sm:justify-center gap-3 ${
+                  showHeavy
+                    ? 'border-amber-500 bg-amber-500/20 text-amber-200 shadow-md shadow-amber-500/20 font-black'
+                    : 'border-[#2B3D5D] bg-[#141F38] text-gray-400 hover:border-gray-600 font-bold'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">{showHeavy ? '☑' : '☐'}</span>
+                  <AlertTriangle size={16} className={showHeavy ? 'text-amber-400' : 'text-gray-400'} />
+                  <span className="text-xs sm:text-sm">Cargas Pesadas</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${showHeavy ? 'bg-amber-500 text-black' : 'bg-gray-800 text-gray-400'}`}>
+                  {heavyCount}
+                </span>
+              </button>
+            </div>
           </div>
 
           {filteredAvailableOrders.length === 0 ? (

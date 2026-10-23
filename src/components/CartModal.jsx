@@ -217,28 +217,24 @@ export function CartModal({
                 {/* Payment method */}
                 <div className="input-group">
                   <label className="input-label">Método de Pago</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
                     {[
-                      { id: 'pago_movil', label: 'Pago Móvil (Bs)' },
-                      { id: 'cash_usd', label: 'Efectivo USD ($)' },
-                      { id: 'cash_bs', label: 'Efectivo Bs' }
+                      { id: 'pago_movil', label: 'Pago Móvil (Bs)', icon: '⚡' },
+                      { id: 'cash_usd', label: 'Efectivo USD ($)', icon: '💵' },
+                      { id: 'cash_bs', label: 'Efectivo Bolívares (Bs)', icon: '🇻🇪' }
                     ].map((pm) => (
                       <button
                         type="button"
                         key={pm.id}
                         onClick={() => setPaymentMethod(pm.id)}
-                        style={{
-                          padding: '10px 8px',
-                          borderRadius: 'var(--radius-md)',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          textAlign: 'center',
-                          background: paymentMethod === pm.id ? 'var(--brand-gradient)' : 'rgba(255, 255, 255, 0.04)',
-                          color: paymentMethod === pm.id ? '#FFFFFF' : 'var(--text-muted)',
-                          border: paymentMethod === pm.id ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--border-subtle)'
-                        }}
+                        className={`p-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer min-h-[46px] ${
+                          paymentMethod === pm.id
+                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent shadow-lg shadow-orange-500/25 scale-[1.01]'
+                            : 'bg-[#141F38] text-gray-300 border-[#2B3D5D] hover:border-gray-500'
+                        }`}
                       >
-                        {pm.label}
+                        <span>{pm.icon}</span>
+                        <span>{pm.label}</span>
                       </button>
                     ))}
                   </div>
@@ -351,11 +347,18 @@ export function CartModal({
           </div>
 
           {cart.length > 0 && (
-            <div className="modal-footer">
-              <button type="button" onClick={onClose} className="btn-outline">
+            <div className="modal-footer flex flex-col-reverse sm:flex-row gap-3 w-full p-4 sm:p-5">
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="btn-outline w-full sm:w-auto min-h-[48px]"
+              >
                 Seguir Comprando
               </button>
-              <button type="submit" className="btn-brand">
+              <button 
+                type="submit" 
+                className="btn-brand w-full sm:w-auto min-h-[48px] font-extrabold text-sm sm:text-base flex-1 shadow-lg shadow-orange-500/25"
+              >
                 Confirmar Orden (${total.toFixed(2)} / {totalBsFormatted})
               </button>
             </div>
