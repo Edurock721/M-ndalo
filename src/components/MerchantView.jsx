@@ -603,7 +603,7 @@ export function MerchantView({
 
       {/* Tab: Stats */}
       {activeTab === 'stats' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 16 }}>
           <div className="glass-panel" style={{ padding: 20 }}>
             <span style={{ fontSize: 12, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Ventas Totales</span>
             <h3 style={{ fontSize: 26, color: '#10B981', marginTop: 4 }}>${totalSales.toFixed(2)}</h3>

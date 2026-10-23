@@ -276,24 +276,24 @@ export function AdminPortal() {
 
       {/* Header Superior Principal con Espaciado Generoso */}
       <header className="sticky top-0 z-30 bg-[#0B101E]/95 backdrop-blur-md border-b border-gray-800/80 px-4 sm:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center font-black text-white shadow-lg shadow-emerald-500/25">
               <ShieldCheck className="w-7 h-7" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-emerald-400 font-extrabold uppercase tracking-wider">Super Administrador</span>
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               </div>
-              <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
+              <h1 className="truncate text-base sm:text-xl font-black text-white tracking-tight">
                 Panel Central MÁNDALO!
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm shadow-sm">
+          <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm shadow-sm">
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 flex-shrink-0" />
               <span className="text-gray-400 hidden md:inline font-medium text-xs">Tasa BCV:</span>
               <span className="font-mono font-black text-emerald-400 text-xs sm:text-sm">{currentRate.toFixed(2)} Bs/$</span>
@@ -311,7 +311,7 @@ export function AdminPortal() {
               title="Cerrar sesión de Administrador"
             >
               <LogOut className="w-5 h-5 text-red-400 flex-shrink-0" strokeWidth={2.3} />
-              <span className="text-xs sm:text-sm font-black">Salir</span>
+              <span className="hidden sm:inline text-xs sm:text-sm font-black">Salir</span>
             </button>
           </div>
         </div>

@@ -214,7 +214,7 @@ export function AdminView({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
           gap: 16,
           background: 'rgba(0, 0, 0, 0.25)',
           padding: 16,

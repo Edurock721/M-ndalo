@@ -232,7 +232,7 @@ export function Home() {
 
       {/* Botón Flotante Inferior de Carrito para Móvil cuando hay productos */}
       {totalCartItems > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden animate-slide-up">
+        <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden animate-slide-up" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           <button
             onClick={() => setShowCartModal(true)}
             className="w-full h-14 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white font-black text-sm flex items-center justify-between px-4 shadow-2xl shadow-orange-500/60 border border-white/30 active:scale-98 transition-all cursor-pointer"

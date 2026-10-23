@@ -113,7 +113,7 @@ export function RiderView({
               <span className="badge badge-mandadito">En Línea 🟢</span>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              {currentUser.phone} • Saldo acumulado: <strong style={{ color: '#00F2FE' }}>${currentUser.wallet_balance.toFixed(2)}</strong> <span style={{ color: '#FBBF24', fontWeight: 700 }}>· {formatBs(currentUser.wallet_balance)}</span>
+              {currentUser.phone} • Saldo acumulado: <strong style={{ color: '#00F2FE' }}>${currentUser.walletBalance.toFixed(2)}</strong> <span style={{ color: '#FBBF24', fontWeight: 700 }}>· {formatBs(currentUser.walletBalance)}</span>
             </p>
           </div>
         </div>
