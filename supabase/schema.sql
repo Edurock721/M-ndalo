@@ -325,6 +325,87 @@ $$;
 GRANT EXECUTE ON FUNCTION public.admin_set_merchant_verified(UUID, BOOLEAN) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.admin_set_user_verified(UUID, BOOLEAN) TO authenticated, anon;
 
+-- Función RPC segura para que el Administrador elimine comercios o usuarios permanentemente
+CREATE OR REPLACE FUNCTION public.admin_delete_user(p_user_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_owner_id UUID := p_user_id;
+  v_merchant_ids UUID[];
+BEGIN
+  IF auth.uid() IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Solo un administrador puede eliminar usuarios o comercios.';
+  END IF;
+
+  -- 1. Si p_user_id corresponde directamente a un registro en merchants:
+  IF EXISTS (SELECT 1 FROM public.merchants WHERE id = p_user_id) THEN
+    SELECT owner_id INTO v_owner_id FROM public.merchants WHERE id = p_user_id;
+    v_merchant_ids := ARRAY[p_user_id];
+  ELSE
+    SELECT ARRAY_AGG(id) INTO v_merchant_ids FROM public.merchants WHERE owner_id = p_user_id;
+  END IF;
+
+  -- 2. Eliminar mensajes de chat de órdenes vinculadas
+  DELETE FROM public.order_messages
+  WHERE order_id IN (
+    SELECT id FROM public.orders
+    WHERE (v_merchant_ids IS NOT NULL AND merchant_id = ANY(v_merchant_ids))
+       OR client_id = v_owner_id 
+       OR rider_id = v_owner_id
+  );
+
+  -- 3. Eliminar órdenes vinculadas para evitar violaciones de clave foránea
+  DELETE FROM public.orders
+  WHERE (v_merchant_ids IS NOT NULL AND merchant_id = ANY(v_merchant_ids))
+     OR client_id = v_owner_id 
+     OR rider_id = v_owner_id;
+
+  -- 4. Eliminar productos del comercio
+  IF v_merchant_ids IS NOT NULL THEN
+    DELETE FROM public.products
+    WHERE merchant_id = ANY(v_merchant_ids);
+  END IF;
+
+  -- 5. Eliminar de la tabla merchants
+  DELETE FROM public.merchants
+  WHERE id = p_user_id 
+     OR owner_id = p_user_id 
+     OR (v_merchant_ids IS NOT NULL AND id = ANY(v_merchant_ids))
+     OR (v_owner_id IS NOT NULL AND owner_id = v_owner_id);
+
+  -- 6. Eliminar de la tabla profiles
+  DELETE FROM public.profiles
+  WHERE id = p_user_id OR (v_owner_id IS NOT NULL AND id = v_owner_id);
+
+  -- 7. Eliminar de auth.users si existe
+  IF v_owner_id IS NOT NULL THEN
+    DELETE FROM auth.users WHERE id = v_owner_id;
+  END IF;
+  IF p_user_id IS NOT NULL AND p_user_id <> v_owner_id THEN
+    DELETE FROM auth.users WHERE id = p_user_id;
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'deleted_id', p_user_id);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_delete_merchant(p_merchant_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  RETURN public.admin_delete_user(p_merchant_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.admin_delete_merchant(UUID) TO authenticated, anon;
+
 -- 4. TABLA DE PRODUCTOS
 CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -397,6 +478,8 @@ ALTER TABLE public.orders DROP COLUMN IF EXISTS platform_fee;
 ALTER TABLE public.orders DROP COLUMN IF EXISTS payment_method;
 ALTER TABLE public.orders DROP COLUMN IF EXISTS payment_receipt_url;
 ALTER TABLE public.orders DROP COLUMN IF EXISTS pago_movil_ref;
+ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_merchant_id_fkey;
+ALTER TABLE public.orders ADD CONSTRAINT orders_merchant_id_fkey FOREIGN KEY (merchant_id) REFERENCES public.merchants(id) ON DELETE SET NULL;
 
 CREATE OR REPLACE FUNCTION public.enforce_merchant_order_subscription()
 RETURNS TRIGGER

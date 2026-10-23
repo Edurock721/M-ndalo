@@ -51,6 +51,19 @@ export function AuthProvider({ children }) {
           if (initialSession?.user) {
             const p = await fetchProfile(initialSession.user.id);
             if (mounted) setProfile(p);
+          } else {
+            // Restaurar sesión demo si existe para permitir recargas con F5
+            const savedDemo = localStorage.getItem('mandalo_demo_session');
+            if (savedDemo) {
+              try {
+                const parsed = JSON.parse(savedDemo);
+                if (parsed.user) {
+                  setUser(parsed.user);
+                  setProfile(parsed.profile);
+                  setSession({ user: parsed.user });
+                }
+              } catch (_) {}
+            }
           }
         }
       } catch (err) {
@@ -95,6 +108,7 @@ export function AuthProvider({ children }) {
       throw new Error('Supabase no está configurado. Por favor configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env');
     }
 
+    localStorage.removeItem('mandalo_demo_session');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -328,30 +342,54 @@ export function AuthProvider({ children }) {
     return true;
   };
 
-  // Eliminar usuario permanentemente (para Administrador)
-  const adminDeleteUser = async (userId) => {
-    if (isConfigured && isValidUuid(userId)) {
-      try {
-        await supabase
-          .from('merchants')
-          .delete()
-          .eq('owner_id', userId);
+  // Eliminar usuario o comercio permanentemente (para Administrador)
+  const adminDeleteUser = async (userId, merchantId = null) => {
+    // 1. Marcar inmediatamente como eliminado localmente
+    if (userId) localStore.markDeleted(userId);
+    if (merchantId) localStore.markDeleted(merchantId);
 
-        const { error } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userId);
+    if (isConfigured) {
+      const targetId = userId || merchantId;
+      let cloudDeleted = false;
 
-        if (error) {
-          console.error('Error eliminando perfil en Supabase:', error);
+      // 2. Intentar llamar al RPC admin_delete_user en Supabase
+      if (isValidUuid(targetId)) {
+        try {
+          const { error } = await supabase.rpc('admin_delete_user', {
+            p_user_id: targetId
+          });
+          if (!error) {
+            cloudDeleted = true;
+          } else {
+            console.warn('admin_delete_user RPC no disponible aún o falló:', error);
+          }
+        } catch (rpcErr) {
+          console.warn('Excepción ejecutando admin_delete_user RPC:', rpcErr);
         }
-      } catch (e) {
-        console.error('Excepción eliminando usuario en Supabase:', e);
+      }
+
+      // 3. Si no se pudo por RPC, intentar borrado directo
+      if (!cloudDeleted) {
+        try {
+          if (merchantId && isValidUuid(merchantId)) {
+            await supabase.from('products').delete().eq('merchant_id', merchantId);
+            await supabase.from('merchants').delete().eq('id', merchantId);
+          }
+          if (userId && isValidUuid(userId)) {
+            await supabase.from('merchants').delete().eq('owner_id', userId);
+            const { error: profileErr } = await supabase.from('profiles').delete().eq('id', userId);
+            if (profileErr) console.warn('Error eliminando perfil directo en Supabase:', profileErr);
+          }
+        } catch (directErr) {
+          console.warn('Error en borrado directo en Supabase:', directErr);
+        }
       }
     }
 
-    // Eliminar de localStore
-    localStore.deleteProfile(userId);
+    // 4. Limpiar del localStore
+    if (userId) localStore.deleteProfile(userId);
+    if (merchantId) localStore.deleteMerchant(merchantId);
+
     return true;
   };
 
@@ -378,6 +416,7 @@ export function AuthProvider({ children }) {
 
   // Sign out
   const signOut = async () => {
+    localStorage.removeItem('mandalo_demo_session');
     if (isConfigured) {
       await supabase.auth.signOut();
     }
@@ -424,6 +463,7 @@ export function AuthProvider({ children }) {
       is_verified: role === 'client' || role === 'admin' ? true : verified
     };
 
+    localStorage.setItem('mandalo_demo_session', JSON.stringify({ user: demoUser, profile: demoProfile }));
     setUser(demoUser);
     setProfile(demoProfile);
     setSession({ user: demoUser });

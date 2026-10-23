@@ -16,7 +16,8 @@ const STORAGE_KEYS = {
   PRODUCTS: 'mandalo_products',
   ORDERS: 'mandalo_orders',
   MESSAGES: 'mandalo_messages',
-  CURRENT_USER_ID: 'mandalo_current_user_id'
+  CURRENT_USER_ID: 'mandalo_current_user_id',
+  DELETED_IDS: 'mandalo_deleted_ids'
 };
 
 // Check for configured Supabase credentials
@@ -378,8 +379,11 @@ class LocalStore {
   }
 
   deleteMerchant(merchantId) {
+    if (!merchantId) return;
+    this.markDeleted(merchantId);
     this.merchants = this.merchants.filter(merchant => merchant.id !== merchantId);
     this.saveToStorage();
+    this.notify();
   }
 
   upsertProducts(products) {
@@ -432,10 +436,51 @@ class LocalStore {
     this.saveToStorage();
   }
 
+  markDeleted(id) {
+    if (!id) return;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.DELETED_IDS);
+      const set = new Set(stored ? JSON.parse(stored) : []);
+      set.add(String(id));
+      localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify([...set]));
+    } catch (e) {
+      console.warn('Error saving deleted ID:', e);
+    }
+  }
+
+  unmarkDeleted(id) {
+    if (!id) return;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.DELETED_IDS);
+      if (stored) {
+        const set = new Set(JSON.parse(stored));
+        set.delete(String(id));
+        localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify([...set]));
+      }
+    } catch (e) {
+      console.warn('Error unmarking deleted ID:', e);
+    }
+  }
+
+  isDeleted(id) {
+    if (!id) return false;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.DELETED_IDS);
+      if (!stored) return false;
+      const set = new Set(JSON.parse(stored));
+      return set.has(String(id));
+    } catch (e) {
+      return false;
+    }
+  }
+
   deleteProfile(userId) {
+    if (!userId) return;
+    this.markDeleted(userId);
     this.profiles = this.profiles.filter(p => p.id !== userId);
     this.merchants = this.merchants.filter(m => m.owner_id !== userId && m.id !== userId);
     this.saveToStorage();
+    this.notify();
   }
 }
 

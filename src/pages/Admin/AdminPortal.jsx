@@ -92,11 +92,17 @@ export function AdminPortal() {
 
         if (error) throw error;
         if (merchantError) console.warn('AdminPortal: No se pudieron cargar los planes de comercios:', merchantError);
-        const loadedMerchants = merchantData || [];
+        
+        // Excluir cualquier registro marcado como eliminado
+        const rawMerchants = merchantData || [];
+        const loadedMerchants = rawMerchants.filter(m => 
+          !localStore.isDeleted(m.id) && !localStore.isDeleted(m.owner_id)
+        );
         loadedMerchants.forEach(merchant => localStore.upsertMerchant(merchant));
 
         if (data) {
-          data.forEach(p => {
+          const loadedProfiles = data.filter(p => !localStore.isDeleted(p.id));
+          loadedProfiles.forEach(p => {
             const merchant = loadedMerchants.find(item => item.owner_id === p.id);
             localStore.updateProfile(p.id, {
               ...p,
@@ -114,7 +120,7 @@ export function AdminPortal() {
 
         // Asegurarse de que cualquier comercio de Supabase esté presente en profiles para su gestión
         loadedMerchants.forEach(m => {
-          if (m.owner_id) {
+          if (m.owner_id && !localStore.isDeleted(m.owner_id) && !localStore.isDeleted(m.id)) {
             const currentProfile = localStore.profiles.find(p => p.id === m.owner_id);
             if (!currentProfile) {
               localStore.updateProfile(m.owner_id, {
@@ -154,12 +160,19 @@ export function AdminPortal() {
           if (payload.eventType === 'DELETE') {
             localStore.deleteProfile(payload.old.id);
           } else if (payload.new?.id) {
-            localStore.updateProfile(payload.new.id, payload.new);
+            if (!localStore.isDeleted(payload.new.id)) {
+              localStore.updateProfile(payload.new.id, payload.new);
+            }
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, payload => {
-          if (payload.eventType === 'DELETE') localStore.deleteMerchant(payload.old.id);
-          else if (payload.new) localStore.upsertMerchant(payload.new);
+          if (payload.eventType === 'DELETE') {
+            localStore.deleteMerchant(payload.old.id);
+          } else if (payload.new) {
+            if (!localStore.isDeleted(payload.new.id) && !localStore.isDeleted(payload.new.owner_id)) {
+              localStore.upsertMerchant(payload.new);
+            }
+          }
         })
         .subscribe();
     }
@@ -327,7 +340,16 @@ export function AdminPortal() {
     setIsSubmitting(true);
     try {
       const name = userToDelete.full_name || userToDelete.merchant_name || 'Usuario';
-      await adminDeleteUser(userToDelete.id);
+      const targetUserId = userToDelete.id;
+      const targetMerchantId = userToDelete.merchant_id || (userToDelete.role === 'merchant' ? userToDelete.id : null);
+      
+      await adminDeleteUser(targetUserId, targetMerchantId);
+      
+      setStoreState({
+        profiles: [...localStore.profiles],
+        merchants: [...localStore.merchants]
+      });
+
       showNotification(`✓ "${name}" ha sido eliminado del sistema exitosamente`);
       setUserToDelete(null);
     } catch (err) {
