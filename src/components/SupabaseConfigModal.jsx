@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Zap
 } from 'lucide-react';
-import { SUPABASE_SQL_SCHEMA } from '../lib/mockData';
+import SUPABASE_SQL_SCHEMA from '../../supabase/schema.sql?raw';
 import { getSupabaseConfig, saveSupabaseConfig } from '../lib/supabase';
 import { soundManager } from '../lib/soundEffects';
 

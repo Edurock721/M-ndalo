@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { localStore } from '../../lib/supabase';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 import { exchangeRateService } from '../../lib/exchangeRate';
-import { AdminView } from '../../components/AdminView';
+import { getSubscriptionState } from '../../lib/merchantSubscription';
 import { 
   ShieldCheck, 
   Bike, 
@@ -27,13 +27,8 @@ import {
   X,
   Save,
   AlertTriangle,
-  Wallet,
-  Tag,
-  DollarSign,
   UserCheck,
   UserX,
-  RefreshCw,
-  Plus
 } from 'lucide-react';
 
 export function AdminPortal() {
@@ -48,8 +43,7 @@ export function AdminPortal() {
 
   const [storeState, setStoreState] = useState(() => ({
     profiles: localStore.profiles,
-    merchants: localStore.merchants,
-    orders: localStore.orders
+    merchants: localStore.merchants
   }));
 
   const [rateData, setRateData] = useState(() => ({
@@ -58,12 +52,12 @@ export function AdminPortal() {
     isFetching: exchangeRateService.isFetching
   }));
 
-  // Tabs: 'riders' | 'merchants' | 'clients' | 'finance'
+  // Tabs: 'riders' | 'merchants' | 'clients'
   const [activeTab, setActiveTab] = useState('riders');
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'verified'
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Modal states
   const [editingUser, setEditingUser] = useState(null);
@@ -75,13 +69,32 @@ export function AdminPortal() {
   const fetchSupabaseProfiles = async () => {
     if (isSupabaseConfigured()) {
       try {
-        const { data, error } = await supabase
+        const [{ data, error }, { data: merchantData, error: merchantError }] = await Promise.all([
+          supabase
           .from('profiles')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }),
+          supabase.from('merchants').select('*').order('created_at', { ascending: false })
+        ]);
 
-        if (!error && data && data.length > 0) {
-          data.forEach(p => localStore.updateProfile(p.id, p));
+        if (error) throw error;
+        if (merchantError) console.warn('AdminPortal: No se pudieron cargar los planes de comercios:', merchantError);
+        if (data) {
+          const loadedMerchants = merchantData || [];
+          loadedMerchants.forEach(merchant => localStore.upsertMerchant(merchant));
+          data.forEach(p => {
+            const merchant = loadedMerchants.find(item => item.owner_id === p.id);
+            localStore.updateProfile(p.id, {
+              ...p,
+              merchant_id: merchant?.id,
+              verified: merchant?.verified,
+              plan: merchant?.plan,
+              subscription_status: merchant?.subscription_status,
+              trial_start: merchant?.trial_start,
+              trial_end: merchant?.trial_end,
+              subscription_end: merchant?.subscription_end
+            });
+          });
         }
       } catch (err) {
         console.warn('AdminPortal: No se pudieron sincronizar perfiles de Supabase:', err);
@@ -92,11 +105,28 @@ export function AdminPortal() {
   useEffect(() => {
     fetchSupabaseProfiles();
 
+    let adminChannel;
+    if (isSupabaseConfigured()) {
+      adminChannel = supabase
+        .channel('admin-merchant-approvals')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
+          if (payload.eventType === 'DELETE') {
+            localStore.deleteProfile(payload.old.id);
+          } else if (payload.new?.role === 'merchant') {
+            localStore.updateProfile(payload.new.id, payload.new);
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, payload => {
+          if (payload.eventType === 'DELETE') localStore.deleteMerchant(payload.old.id);
+          else if (payload.new) localStore.upsertMerchant(payload.new);
+        })
+        .subscribe();
+    }
+
     const unsubStore = localStore.subscribe(() => {
       setStoreState({
         profiles: [...localStore.profiles],
-        merchants: [...localStore.merchants],
-        orders: [...localStore.orders]
+        merchants: [...localStore.merchants]
       });
     });
 
@@ -107,6 +137,7 @@ export function AdminPortal() {
     return () => {
       unsubStore();
       unsubRate();
+      adminChannel?.unsubscribe();
     };
   }, []);
 
@@ -142,6 +173,14 @@ export function AdminPortal() {
     merchantsList.filter(m => !m.is_verified).length, 
     [merchantsList]
   );
+  const merchantPlanCounts = useMemo(() => ({
+    total: merchantsList.length,
+    active: merchantsList.filter(m => m.is_verified && !getSubscriptionState(m).expired).length,
+    trial: merchantsList.filter(m => getSubscriptionState(m).plan === 'trial' && !getSubscriptionState(m).expired).length,
+    free: merchantsList.filter(m => getSubscriptionState(m).plan === 'free').length,
+    pro: merchantsList.filter(m => getSubscriptionState(m).plan === 'pro' && !getSubscriptionState(m).expired).length,
+    expired: merchantsList.filter(m => getSubscriptionState(m).expired).length
+  }), [merchantsList]);
 
   // Filtrado reactivo según búsqueda y estado
   const filterList = (list) => {
@@ -158,11 +197,15 @@ export function AdminPortal() {
         (item.email && item.email.toLowerCase().includes(query));
 
       // Filtro de estado
-      if (statusFilter === 'pending') {
-        return matchQuery && !item.is_verified;
+      if (statusFilter === 'pending') return matchQuery && !item.is_verified;
+      if (statusFilter === 'verified') return matchQuery && item.is_verified;
+      if (statusFilter === 'active') {
+        return matchQuery && item.is_verified && !getSubscriptionState(item).expired;
       }
-      if (statusFilter === 'verified') {
-        return matchQuery && item.is_verified;
+      if (['trial', 'free', 'pro', 'expired'].includes(statusFilter)) {
+        const subscription = getSubscriptionState(item);
+        if (statusFilter === 'expired') return matchQuery && subscription.expired;
+        return matchQuery && subscription.plan === statusFilter && !subscription.expired;
       }
       return matchQuery;
     });
@@ -197,7 +240,6 @@ export function AdminPortal() {
       phone: userItem.phone || '',
       identity_doc: userItem.identity_doc || '',
       address: userItem.address || '',
-      wallet_balance: userItem.wallet_balance ?? 0,
       is_verified: userItem.is_verified ?? true,
       // Rider
       cooperative: userItem.cooperative || '',
@@ -224,8 +266,7 @@ export function AdminPortal() {
 
       const updates = {
         ...editingUser,
-        full_name: calculatedFullName,
-        wallet_balance: parseFloat(Number(editingUser.wallet_balance || 0).toFixed(2))
+        full_name: calculatedFullName
       };
 
       await adminUpdateUser(editingUser.id, updates);
@@ -254,9 +295,6 @@ export function AdminPortal() {
       setIsSubmitting(false);
     }
   };
-
-  const formatBs = (usd) => 
-    `Bs. ${(Number(usd || 0) * currentRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="min-h-screen bg-[#070B14] text-white pb-24 font-sans selection:bg-orange-500 selection:text-white">
@@ -339,12 +377,12 @@ export function AdminPortal() {
             {/* 4 Métricas Clave Espaciadas */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div 
-                onClick={() => { setActiveTab('riders'); setStatusFilter('pending'); }}
+                onClick={() => { setActiveTab('merchants'); setStatusFilter('all'); }}
                 className="bg-[#15203B]/80 hover:bg-[#1A284A] border border-amber-500/30 hover:border-amber-500/60 p-4 sm:p-5 rounded-2xl text-center cursor-pointer transition-all shadow-lg"
               >
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Riders x Aprobar</span>
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Total comercios</span>
                 <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono mt-1 block">
-                  {pendingRidersCount}
+                  {merchantPlanCounts.total}
                 </span>
               </div>
 
@@ -352,30 +390,40 @@ export function AdminPortal() {
                 onClick={() => { setActiveTab('merchants'); setStatusFilter('pending'); }}
                 className="bg-[#15203B]/80 hover:bg-[#1A284A] border border-amber-500/30 hover:border-amber-500/60 p-4 sm:p-5 rounded-2xl text-center cursor-pointer transition-all shadow-lg"
               >
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Comercios x Aprobar</span>
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Comercios pendientes por validar</span>
                 <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono mt-1 block">
                   {pendingMerchantsCount}
                 </span>
               </div>
 
               <div 
-                onClick={() => { setActiveTab('clients'); setStatusFilter('all'); }}
+                onClick={() => { setActiveTab('merchants'); setStatusFilter('active'); }}
                 className="bg-[#15203B]/80 hover:bg-[#1A284A] border border-cyan-500/30 hover:border-cyan-500/60 p-4 sm:p-5 rounded-2xl text-center cursor-pointer transition-all shadow-lg"
               >
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Clientes</span>
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Comercios activos</span>
                 <span className="text-2xl sm:text-3xl font-black text-cyan-400 font-mono mt-1 block">
-                  {clientsList.length}
+                  {merchantPlanCounts.active}
                 </span>
               </div>
 
               <div 
-                onClick={() => setActiveTab('finance')}
+                onClick={() => { setActiveTab('merchants'); setStatusFilter('pro'); }}
                 className="bg-[#15203B]/80 hover:bg-[#1A284A] border border-emerald-500/30 hover:border-emerald-500/60 p-4 sm:p-5 rounded-2xl text-center cursor-pointer transition-all shadow-lg"
               >
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Total Activos</span>
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Comercios Pro</span>
                 <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono mt-1 block">
-                  {(riders.length + merchantsList.length + clientsList.length) - (pendingRidersCount + pendingMerchantsCount)}
+                  {merchantPlanCounts.pro}
                 </span>
+              </div>
+
+              <div onClick={() => { setActiveTab('merchants'); setStatusFilter('trial'); }} className="bg-[#15203B]/80 border border-blue-500/30 p-4 sm:p-5 rounded-2xl text-center cursor-pointer">
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Comercios en prueba</span>
+                <span className="text-2xl sm:text-3xl font-black text-blue-400 font-mono mt-1 block">{merchantPlanCounts.trial}</span>
+              </div>
+
+              <div onClick={() => { setActiveTab('merchants'); setStatusFilter('expired'); }} className="bg-[#15203B]/80 border border-red-500/30 p-4 sm:p-5 rounded-2xl text-center cursor-pointer">
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider block font-bold">Comercios vencidos</span>
+                <span className="text-2xl sm:text-3xl font-black text-red-400 font-mono mt-1 block">{merchantPlanCounts.expired}</span>
               </div>
             </div>
           </div>
@@ -445,21 +493,10 @@ export function AdminPortal() {
               </span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('finance')}
-              className={`px-6 py-4 rounded-2xl font-black text-sm sm:text-base flex items-center gap-3 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'finance'
-                  ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/25 scale-[1.02]'
-                  : 'bg-[#12192B] text-gray-300 hover:text-white hover:bg-[#18233D] border border-gray-800'
-              }`}
-            >
-              <TrendingUp className="w-5 h-5" />
-              <span>Tasa BCV & Finanzas</span>
-            </button>
           </div>
 
           {/* Panel de Búsqueda y Filtros con Espaciado Amplio y Desahogado */}
-          {activeTab !== 'finance' && (
+          {(
             <div className="bg-[#0D1424] border border-[#233352] rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
               {/* Buscador a Ancho Completo */}
               <div className="relative w-full">
@@ -531,8 +568,17 @@ export function AdminPortal() {
                         }`}
                       >
                         <CheckCircle className="w-4 h-4" />
-                        <span>Aprobados y Activos</span>
+                        <span>{activeTab === 'merchants' ? 'Comercios aprobados' : 'Aprobados y activos'}</span>
                       </button>
+                      {activeTab === 'merchants' && ['trial', 'free', 'pro', 'expired'].map(planStatus => (
+                        <button
+                          key={planStatus}
+                          onClick={() => setStatusFilter(planStatus)}
+                          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold capitalize ${statusFilter === planStatus ? 'bg-blue-500 text-white' : 'bg-[#141F38] text-blue-200 border border-blue-500/30'}`}
+                        >
+                          {planStatus === 'trial' ? 'En prueba' : planStatus === 'free' ? 'Gratuitos' : planStatus === 'pro' ? 'Pro' : 'Vencidos'}
+                        </button>
+                      ))}
                     </>
                   )}
                 </div>
@@ -605,16 +651,8 @@ export function AdminPortal() {
                           </div>
                         </div>
 
-                        {/* Estado y Saldo en Pastillas Grandes */}
+                        {/* Estado de validación */}
                         <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-                          <div className="bg-[#141F38] border border-emerald-500/30 px-4 py-2 rounded-2xl text-right">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold block">Saldo Billetera</span>
-                            <span className="text-sm sm:text-base font-black text-emerald-400 font-mono">
-                              ${Number(r.wallet_balance || 0).toFixed(2)} USD 
-                              <span className="text-xs text-amber-400 ml-1.5 font-normal">({formatBs(r.wallet_balance)})</span>
-                            </span>
-                          </div>
-
                           <span className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm ${
                             isVerified 
                               ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300' 
@@ -713,7 +751,7 @@ export function AdminPortal() {
             <div className="flex items-center justify-between pb-2">
               <div>
                 <h3 className="text-xl font-black text-white flex items-center gap-2">
-                  Comercios y Locales Afiliados ({filteredMerchants.length})
+                  {statusFilter === 'pending' ? 'Comercios pendientes por validar' : 'Comercios y Locales Afiliados'} ({filteredMerchants.length})
                 </h3>
                 <p className="text-sm text-gray-400 mt-1">
                   Valida la información comercial, número de RIF, encargado del establecimiento y habilita el catálogo de productos.
@@ -762,15 +800,11 @@ export function AdminPortal() {
                           </div>
                         </div>
 
-                        {/* Estado y Saldo */}
+                        {/* Plan y estado */}
                         <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-                          <div className="bg-[#141F38] border border-emerald-500/30 px-4 py-2 rounded-2xl text-right">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold block">Saldo Comercio</span>
-                            <span className="text-sm sm:text-base font-black text-emerald-400 font-mono">
-                              ${Number(m.wallet_balance || 0).toFixed(2)} USD 
-                              <span className="text-xs text-amber-400 ml-1.5 font-normal">({formatBs(m.wallet_balance)})</span>
-                            </span>
-                          </div>
+                          <span className="px-4 py-2.5 rounded-2xl text-xs font-black uppercase border border-blue-500/40 bg-blue-500/10 text-blue-300">
+                            {getSubscriptionState(m).expired ? 'Vencido' : getSubscriptionState(m).plan.toUpperCase()}
+                          </span>
 
                           <span className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm ${
                             isVerified 
@@ -871,7 +905,7 @@ export function AdminPortal() {
                   Clientes Registrados ({filteredClients.length})
                 </h3>
                 <p className="text-sm text-gray-400 mt-1">
-                  Visualiza a todos los usuarios compradores, gestiona su saldo en billetera o actualiza sus direcciones de despacho.
+                  Visualiza a los usuarios compradores y actualiza sus datos de contacto y despacho.
                 </p>
               </div>
             </div>
@@ -906,15 +940,8 @@ export function AdminPortal() {
                           </div>
                         </div>
 
-                        {/* Saldo y Estado */}
+                        {/* Estado de cuenta */}
                         <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-                          <div className="bg-[#141F38] border border-emerald-500/30 px-4 py-2 rounded-2xl text-right">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold block">Saldo Billetera</span>
-                            <span className="text-sm sm:text-base font-black text-emerald-400 font-mono">
-                              ${Number(c.wallet_balance || 0).toFixed(2)} USD 
-                              <span className="text-xs text-amber-400 ml-1.5 font-normal">({formatBs(c.wallet_balance)})</span>
-                            </span>
-                          </div>
 
                           <span className="px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 flex items-center gap-2">
                             <UserCheck className="w-4 h-4" />
@@ -973,26 +1000,6 @@ export function AdminPortal() {
           </section>
         )}
 
-        {/* ============================================================== */}
-        {/* 4. SECCIÓN: TASA BCV & FINANZAS (AdminView) */}
-        {/* ============================================================== */}
-        {activeTab === 'finance' && (
-          <section className="space-y-6">
-            <AdminView
-              profiles={storeState.profiles}
-              merchants={storeState.merchants}
-              orders={storeState.orders}
-              onAdjustWallet={(userId, amount, reason) => localStore.adjustWallet(userId, amount, reason)}
-              onToggleVerification={(userId) => localStore.toggleVerification(userId)}
-              onResetDefaults={() => localStore.resetToDefaults()}
-              exchangeRate={currentRate}
-              exchangeRateData={rateData}
-              onSetManualRate={(val) => exchangeRateService.setManualRate(val)}
-              onRefreshRate={() => exchangeRateService.fetchLiveRate()}
-            />
-          </section>
-        )}
-
       </main>
 
       {/* ============================================================== */}
@@ -1012,7 +1019,7 @@ export function AdminPortal() {
                   <h3 className="text-xl font-black text-white">
                     Editar Datos ({editingUser.role === 'rider' ? 'Taxista / Repartidor' : editingUser.role === 'merchant' ? 'Comercio' : 'Cliente'})
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Modifica los datos personales, fiscales o saldo disponible.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Modifica los datos personales o fiscales.</p>
                 </div>
               </div>
               <button
@@ -1138,9 +1145,7 @@ export function AdminPortal() {
 
               {/* Datos Personales Comunes (Nombres, Cédula, Teléfono, Dirección) */}
               <div className="bg-[#141F38] border border-gray-700/80 rounded-2xl p-5 space-y-5">
-                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block">
-                  Información Personal & Saldo en Billetera
-                </span>
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block">Información Personal</span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
@@ -1177,22 +1182,6 @@ export function AdminPortal() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-2">
-                      Saldo en Billetera ($ USD)
-                    </label>
-                    <div className="relative">
-                      <DollarSign className="w-5 h-5 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={editingUser.wallet_balance}
-                        onChange={(e) => setEditingUser({ ...editingUser, wallet_balance: e.target.value })}
-                        className="w-full h-12 bg-[#0D1527] border border-gray-700 rounded-xl pl-10 pr-4 text-sm text-emerald-400 font-mono font-black focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <div>

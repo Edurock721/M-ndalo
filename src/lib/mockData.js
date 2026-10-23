@@ -8,7 +8,6 @@ export const INITIAL_PROFILES = [
     full_name: "Carlos Mendoza",
     phone: "0414-5551234",
     role: "client",
-    wallet_balance: 15.00,
     is_verified: true,
     created_at: new Date(Date.now() - 86400000 * 5).toISOString()
   },
@@ -17,7 +16,6 @@ export const INITIAL_PROFILES = [
     full_name: "Roberto Da Silva (El Rincón Llanero)",
     phone: "0424-9876543",
     role: "merchant",
-    wallet_balance: 85.50,
     is_verified: true,
     created_at: new Date(Date.now() - 86400000 * 10).toISOString()
   },
@@ -26,7 +24,6 @@ export const INITIAL_PROFILES = [
     full_name: "Yordanis 'Flash' Gómez (Bera SBR 150)",
     phone: "0412-3334455",
     role: "rider",
-    wallet_balance: 32.50,
     is_verified: true,
     created_at: new Date(Date.now() - 86400000 * 8).toISOString()
   },
@@ -35,12 +32,10 @@ export const INITIAL_PROFILES = [
     full_name: "Admin Central MÁNDALO!",
     phone: "0416-0001122",
     role: "admin",
-    wallet_balance: 245.00,
     is_verified: true,
     created_at: new Date(Date.now() - 86400000 * 30).toISOString()
   }
 ];
-
 export const INITIAL_MERCHANTS = [
   {
     id: "merch-1",
@@ -53,6 +48,12 @@ export const INITIAL_MERCHANTS = [
     rating: 4.9,
     delivery_time: "20-30 min",
     delivery_fee: 1.50,
+    verified: true,
+    plan: "pro",
+    subscription_status: "active",
+    subscription_end: new Date(Date.now() + 86400000 * 30).toISOString(),
+    payment_methods: { cash: true, pagoMovil: true, transferencia: true, divisas: true, contraEntrega: true },
+    payment_config: { titular: "Roberto Da Silva", cedula: "V-12345678", telefonoPagoMovil: "0424-9876543", banco: "Banesco", numeroCuenta: "", aceptaDivisas: true },
     is_active: true,
     created_at: new Date(Date.now() - 86400000 * 10).toISOString()
   },
@@ -67,6 +68,11 @@ export const INITIAL_MERCHANTS = [
     rating: 4.8,
     delivery_time: "15-25 min",
     delivery_fee: 1.20,
+    verified: true,
+    plan: "trial",
+    subscription_status: "active",
+    trial_start: new Date(Date.now() - 86400000 * 5).toISOString(),
+    trial_end: new Date(Date.now() + 86400000 * 25).toISOString(),
     is_active: true,
     created_at: new Date(Date.now() - 86400000 * 9).toISOString()
   },
@@ -81,6 +87,9 @@ export const INITIAL_MERCHANTS = [
     rating: 4.7,
     delivery_time: "15-20 min",
     delivery_fee: 1.50,
+    verified: true,
+    plan: "free",
+    subscription_status: "active",
     is_active: true,
     created_at: new Date(Date.now() - 86400000 * 7).toISOString()
   },
@@ -95,6 +104,10 @@ export const INITIAL_MERCHANTS = [
     rating: 4.9,
     delivery_time: "20-35 min",
     delivery_fee: 1.50,
+    verified: true,
+    plan: "pro",
+    subscription_status: "active",
+    subscription_end: new Date(Date.now() + 86400000 * 30).toISOString(),
     is_active: true,
     created_at: new Date(Date.now() - 86400000 * 6).toISOString()
   }
@@ -247,11 +260,7 @@ export const INITIAL_ORDERS = [
     subtotal: 12.00,
     delivery_address: "Urb. Las Acacias, Manzana D, Casa #24 (portón verde)",
     delivery_fee: 1.50,
-    platform_fee: 0.50,
-    total: 14.00,
-    payment_method: "pago_movil",
-    payment_receipt_url: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
-    pago_movil_ref: "REF-849201",
+    total: 13.50,
     passenger_count: 0,
     cargo_size: "small",
     notes: "Entregar en puerta principal",
@@ -278,10 +287,7 @@ export const INITIAL_ORDERS = [
     purchase_budget: 0.00,
     subtotal: 0.00,
     delivery_fee: 2.00,
-    platform_fee: 0.50,
-    total: 2.50,
-    payment_method: "cash_usd",
-    payment_receipt_url: null,
+    total: 2.00,
     created_at: new Date(Date.now() - 1000 * 60 * 7).toISOString()
   },
   {
@@ -305,10 +311,7 @@ export const INITIAL_ORDERS = [
     purchase_budget: 0.00,
     subtotal: 0.00,
     delivery_fee: 3.50,
-    platform_fee: 0.50,
-    total: 4.00,
-    payment_method: "cash_usd",
-    payment_receipt_url: null,
+    total: 3.50,
     created_at: new Date(Date.now() - 1000 * 60 * 3).toISOString()
   },
   {
@@ -332,10 +335,7 @@ export const INITIAL_ORDERS = [
     purchase_budget: 0.00,
     subtotal: 0.00,
     delivery_fee: 6.00,
-    platform_fee: 0.50,
-    total: 6.50,
-    payment_method: "pago_movil",
-    payment_receipt_url: null,
+    total: 6.00,
     created_at: new Date(Date.now() - 1000 * 60 * 1).toISOString()
   }
 ];
@@ -398,142 +398,3 @@ export const INITIAL_MESSAGES = [
   }
 ];
 
-export const SUPABASE_SQL_SCHEMA = `-- =========================================================
--- ESPECIFICACIÓN MAESTRA DE BASE DE DATOS: "MÁNDALO!"
--- Supabase PostgreSQL 15+ compatible con RLS y Realtime
--- =========================================================
-
--- Extensión UUID
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 1. Perfiles de usuario vinculados al Auth de Supabase
-CREATE TABLE IF NOT EXISTS profiles (
-  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-  full_name TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  role TEXT CHECK (role IN ('client', 'merchant', 'rider', 'admin')) DEFAULT 'client',
-  wallet_balance NUMERIC(10, 2) DEFAULT 0.00,
-  is_verified BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 2. Comercios aliados
-CREATE TABLE IF NOT EXISTS merchants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  category TEXT NOT NULL,
-  address TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  banner_url TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 3. Catálogo de productos por comercio
-CREATE TABLE IF NOT EXISTS products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  price NUMERIC(10, 2) NOT NULL,
-  image_url TEXT,
-  is_available BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. Órdenes unificadas: Compras en Comercios, Mandaditos y Carreras
-CREATE TABLE IF NOT EXISTS orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_type TEXT CHECK (order_type IN ('store_purchase', 'mandadito', 'ride')) NOT NULL DEFAULT 'store_purchase',
-  client_id UUID REFERENCES profiles(id) NOT NULL,
-  merchant_id UUID REFERENCES merchants(id), -- NULL en mandaditos y carreras
-  rider_id UUID REFERENCES profiles(id),     -- Asignado al aceptar
-  status TEXT CHECK (status IN ('pending', 'accepted', 'preparing', 'ready_for_pickup', 'on_way', 'delivered', 'cancelled')) DEFAULT 'pending',
-  
-  -- Campos exclusivos de Compras en Comercios
-  items JSONB, 
-  subtotal NUMERIC(10, 2) DEFAULT 0.00,
-  
-  -- Campos de Mandaditos y Carreras
-  pickup_address TEXT,
-  task_description TEXT,
-  purchase_budget NUMERIC(10, 2) DEFAULT 0.00,
-
-  -- Especificaciones de carga y pasajeros (Decisión del conductor)
-  passenger_count INT DEFAULT 1,
-  cargo_size TEXT CHECK (cargo_size IN ('small', 'medium', 'heavy')) DEFAULT 'small',
-  notes TEXT,
-  
-  -- Logística y cobros comunes
-  delivery_address TEXT NOT NULL,
-  delivery_fee NUMERIC(10, 2) NOT NULL,
-  platform_fee NUMERIC(10, 2) DEFAULT 0.50,
-  payment_method TEXT CHECK (payment_method IN ('pago_movil', 'cash_usd', 'cash_bs')) NOT NULL,
-  payment_receipt_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Migración para bases de datos existentes:
-ALTER TABLE orders 
-  ADD COLUMN IF NOT EXISTS passenger_count INT DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS cargo_size TEXT CHECK (cargo_size IN ('small', 'medium', 'heavy')) DEFAULT 'small',
-  ADD COLUMN IF NOT EXISTS notes TEXT;
-
-GRANT ALL ON TABLE orders TO anon, authenticated;
-GRANT ALL ON TABLE profiles TO anon, authenticated;
-
--- 5. Mensajería contextual por orden
-CREATE TABLE IF NOT EXISTS order_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE NOT NULL,
-  sender_id UUID REFERENCES profiles(id) NOT NULL,
-  channel TEXT CHECK (channel IN ('client_merchant', 'client_rider', 'merchant_rider')) NOT NULL,
-  message TEXT,
-  media_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Índices para optimizar rendimiento de Realtime y consultas
-CREATE INDEX IF NOT EXISTS idx_orders_client ON orders(client_id);
-CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders(merchant_id);
-CREATE INDEX IF NOT EXISTS idx_orders_rider ON orders(rider_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_order_messages_order_id ON order_messages(order_id);
-
--- Activar Realtime en tablas críticas
-ALTER PUBLICATION supabase_realtime ADD TABLE orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE order_messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE products;
-
--- Políticas de Seguridad RLS (Row Level Security)
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE merchants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE order_messages ENABLE ROW LEVEL SECURITY;
-
--- Políticas públicas de lectura para catálogos y perfiles
-CREATE POLICY "Public profiles can be viewed" ON profiles FOR SELECT USING (true);
-CREATE POLICY "Active merchants can be viewed by all" ON merchants FOR SELECT USING (is_active = true);
-CREATE POLICY "Available products can be viewed by all" ON products FOR SELECT USING (is_available = true);
-
--- Políticas de órdenes: Cliente ve sus órdenes, Rider ve asignadas y pendientes, Comercio ve las suyas
-CREATE POLICY "Clients see their own orders" ON orders FOR SELECT USING (auth.uid() = client_id);
-CREATE POLICY "Merchants see their orders" ON orders FOR SELECT USING (
-  merchant_id IN (SELECT id FROM merchants WHERE owner_id = auth.uid())
-);
-CREATE POLICY "Riders see assigned or available orders" ON orders FOR SELECT USING (
-  rider_id = auth.uid() OR rider_id IS NULL
-);
-
--- Mensajería: Solo participantes del canal de la orden pueden leer y escribir
-CREATE POLICY "Order participants can read messages" ON order_messages FOR SELECT USING (
-  order_id IN (
-    SELECT id FROM orders WHERE 
-      client_id = auth.uid() OR 
-      rider_id = auth.uid() OR 
-      merchant_id IN (SELECT id FROM merchants WHERE owner_id = auth.uid())
-  )
-);
-`;

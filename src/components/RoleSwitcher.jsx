@@ -2,7 +2,7 @@ import React from 'react';
 import { User, Store, Bike, Shield, CheckCircle2 } from 'lucide-react';
 import { soundManager } from '../lib/soundEffects';
 
-export function RoleSwitcher({ profiles, currentUserId, onSelectUser, exchangeRate = 884.75 }) {
+export function RoleSwitcher({ currentUserId, onSelectUser }) {
   const roles = [
     {
       id: 'user-client-1',
@@ -35,7 +35,7 @@ export function RoleSwitcher({ profiles, currentUserId, onSelectUser, exchangeRa
       id: 'user-admin-1',
       label: 'Admin',
       name: 'Admin Central',
-      sub: 'Auditoría & Saldo',
+      sub: 'Auditoría de comercios',
       icon: Shield,
       color: '#10B981',
       bg: 'rgba(16, 185, 129, 0.12)'
@@ -94,9 +94,6 @@ export function RoleSwitcher({ profiles, currentUserId, onSelectUser, exchangeRa
           {roles.map((r) => {
             const Icon = r.icon;
             const isSelected = currentUserId === r.id;
-            const profile = profiles.find(p => p.id === r.id);
-            const balance = profile ? profile.wallet_balance : 0;
-
             return (
               <button
                 key={r.id}
@@ -133,15 +130,6 @@ export function RoleSwitcher({ profiles, currentUserId, onSelectUser, exchangeRa
                   <Icon size={12} strokeWidth={2.5} />
                 </div>
                 <span>{r.label}: <strong style={{ color: isSelected ? '#FFFFFF' : 'var(--text-main)' }}>{r.name.split(' ')[0]}</strong></span>
-                <span style={{
-                  fontSize: 11,
-                  padding: '1px 6px',
-                  borderRadius: 10,
-                  background: 'rgba(0,0,0,0.3)',
-                  color: isSelected ? r.color : 'var(--text-dim)'
-                }}>
-                  ${balance.toFixed(2)} · {Math.round(balance * exchangeRate).toLocaleString('es-VE')} Bs
-                </span>
                 {isSelected && <CheckCircle2 size={13} style={{ color: r.color }} />}
               </button>
             );

@@ -90,7 +90,7 @@ export function ImageCompressorModal({ onClose }) {
             lineHeight: 1.5,
             color: '#E0F2FE'
           }}>
-            <strong style={{ color: '#00F2FE' }}>⚡ Política de Ahorro Extremo:</strong> Todas las capturas de Pago Móvil, fotos de productos y adjuntos de chat se comprimen en la GPU/WebWorker del navegador antes de transmitirse. Esto ahorra hasta un <strong>95% de ancho de banda</strong> y mantiene el hosting y storage permanentemente en <strong>$0/mes</strong>.
+            <strong style={{ color: '#00F2FE' }}>⚡ Política de Ahorro Extremo:</strong> Las fotos de productos y adjuntos de chat se comprimen en el navegador antes de transmitirse. Esto ahorra ancho de banda y espacio de almacenamiento.
           </div>
 
           {/* Drag & drop upload area */}

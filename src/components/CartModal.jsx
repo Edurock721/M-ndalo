@@ -4,16 +4,10 @@ import {
   Trash2, 
   Plus, 
   Minus, 
-  ShoppingBag, 
-  UploadCloud, 
-  Check, 
-  CreditCard,
-  Building,
-  DollarSign
+  ShoppingBag
 } from 'lucide-react';
-import { compressImageToWebP } from '../lib/imageCompression';
-import { soundManager } from '../lib/soundEffects';
 import { GpsLocationPicker } from './GpsLocationPicker';
+import { canReceiveOrders, getPaymentConfig, getPaymentMethods, getSubscriptionState, PAYMENT_METHOD_OPTIONS } from '../lib/merchantSubscription';
 
 export function CartModal({ 
   cart, 
@@ -30,40 +24,31 @@ export function CartModal({
 
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCoords, setDeliveryCoords] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('pago_movil');
-  const [pagoMovilRef, setPagoMovilRef] = useState('');
-  const [receiptUrl, setReceiptUrl] = useState(null);
-  const [isCompressingReceipt, setIsCompressingReceipt] = useState(false);
+  const paymentMethods = getPaymentMethods(merchant);
+  const paymentConfig = getPaymentConfig(merchant);
+  const enabledPaymentMethods = PAYMENT_METHOD_OPTIONS.filter(method => (
+    paymentMethods[method.id] && (method.id !== 'divisas' || paymentConfig.aceptaDivisas)
+  ));
+  const canOrder = canReceiveOrders(merchant);
+  const subscriptionState = getSubscriptionState(merchant);
 
   // Totals calculation
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const deliveryFee = merchant?.delivery_fee || 1.50;
-  const platformFee = 0.50;
-  const total = subtotal + deliveryFee + platformFee;
+  const total = subtotal + deliveryFee;
   const totalBsFormatted = formatBs(total);
-
-  const handleReceiptUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsCompressingReceipt(true);
-      const res = await compressImageToWebP(file);
-      setReceiptUrl(res.dataUrl);
-      soundManager.playTap();
-    } catch (err) {
-      console.error('Error compressing cart receipt:', err);
-      alert('Error al procesar el comprobante.');
-    } finally {
-      setIsCompressingReceipt(false);
-    }
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (cart.length === 0) return;
     if (!deliveryAddress.trim()) {
       alert('Por favor ingresa la dirección de entrega.');
+      return;
+    }
+    if (!canOrder) {
+      alert(subscriptionState.expired
+        ? 'Tu suscripción ha vencido. Renueva para seguir recibiendo pedidos.'
+        : 'Este comercio todavía está pendiente de validación.');
       return;
     }
 
@@ -81,11 +66,7 @@ export function CartModal({
       delivery_address: deliveryAddress,
       delivery_coords: deliveryCoords,
       delivery_fee: deliveryFee,
-      platform_fee: platformFee,
-      total,
-      payment_method: paymentMethod,
-      payment_receipt_url: receiptUrl,
-      pago_movil_ref: pagoMovilRef || null
+      total
     });
 
     onClose();
@@ -218,102 +199,24 @@ export function CartModal({
                   helperText="Presiona el botón GPS para fijar tu ubicación y escribir tu dirección automáticamente"
                 />
 
-                {/* Payment method */}
                 <div className="input-group">
-                  <label className="input-label">Método de Pago</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
-                    {[
-                      { id: 'pago_movil', label: 'Pago Móvil (Bs)', icon: '⚡' },
-                      { id: 'cash_usd', label: 'Efectivo USD ($)', icon: '💵' },
-                      { id: 'cash_bs', label: 'Efectivo Bolívares (Bs)', icon: '🇻🇪' }
-                    ].map((pm) => (
-                      <button
-                        type="button"
-                        key={pm.id}
-                        onClick={() => setPaymentMethod(pm.id)}
-                        className={`p-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer min-h-[46px] ${
-                          paymentMethod === pm.id
-                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent shadow-lg shadow-orange-500/25 scale-[1.01]'
-                            : 'bg-[#141F38] text-gray-300 border-[#2B3D5D] hover:border-gray-500'
-                        }`}
-                      >
-                        <span>{pm.icon}</span>
-                        <span>{pm.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Pago Movil Details */}
-                {paymentMethod === 'pago_movil' && (
-                  <div style={{
-                    background: 'rgba(255, 94, 54, 0.05)',
-                    border: '1px solid rgba(255, 94, 54, 0.25)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 14,
-                    marginBottom: 16
-                  }}>
-                    <p style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-orange)', marginBottom: 4 }}>
-                      Datos Pago Móvil {merchant?.name}:
-                    </p>
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
-                      Banesco (0134) • 0424-9876543 • RIF: J-40192831
-                    </p>
-                    <div style={{
-                      padding: '8px 12px',
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      border: '1px solid rgba(245, 158, 11, 0.35)',
-                      borderRadius: 'var(--radius-sm)',
-                      marginBottom: 10,
-                      fontSize: 12.5,
-                      color: '#FBBF24'
-                    }}>
-                      ⚡ Monto Exacto a Transferir: <strong style={{ fontSize: 14, color: '#FFFFFF' }}>{totalBsFormatted}</strong> (Tasa: Bs. {exchangeRate.toFixed(2)}/$)
+                  <label className="input-label">Métodos de pago configurados por {merchant?.name}</label>
+                  {enabledPaymentMethods.length ? (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {enabledPaymentMethods.map(({ id, label }) => (
+                        <div key={id} style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                          <strong style={{ color: 'var(--brand-orange)' }}>{label}</strong>
+                          {id === 'pagoMovil' && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{paymentConfig.titular} · C.I. {paymentConfig.cedula} · {paymentConfig.telefonoPagoMovil} · {paymentConfig.banco}</p>}
+                          {id === 'transferencia' && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{paymentConfig.titular} · C.I. {paymentConfig.cedula} · {paymentConfig.banco} · Cuenta {paymentConfig.numeroCuenta}</p>}
+                          {id === 'divisas' && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{paymentConfig.aceptaDivisas ? 'El comercio acepta USD.' : 'No acepta USD.'}</p>}
+                        </div>
+                      ))}
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>El pago se coordina directamente con el comercio. Mándalo no procesa pagos ni recibe fondos.</p>
                     </div>
-
-                    <input
-                      type="text"
-                      placeholder="Referencia de Pago Móvil (últimos 6 dígitos)"
-                      value={pagoMovilRef}
-                      onChange={(e) => setPagoMovilRef(e.target.value)}
-                      className="input-field"
-                      style={{ marginBottom: 10, fontSize: 13 }}
-                    />
-
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: 10,
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px dashed var(--border-subtle)',
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      color: 'var(--text-muted)'
-                    }}>
-                      <UploadCloud size={16} style={{ color: 'var(--brand-orange)' }} />
-                      <span>{isCompressingReceipt ? 'Comprimiendo a WebP...' : 'Adjuntar captura de Pago Móvil (Auto WebP < 120KB)'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={handleReceiptUpload}
-                      />
-                    </label>
-
-                    {receiptUrl && (
-                      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <img
-                          src={receiptUrl}
-                          alt="Comprobante"
-                          style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }}
-                        />
-                        <span style={{ fontSize: 12, color: '#10B981' }}>✓ Comprobante optimizado en WebP</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Este comercio aún no configuró métodos de pago.</p>
+                  )}
+                </div>
 
                 {/* Totals Breakdown */}
                 <div style={{
@@ -330,12 +233,8 @@ export function CartModal({
                     <span>Costo de Delivery:</span>
                     <span>${deliveryFee.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(deliveryFee)}</strong></span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, color: 'var(--text-muted)' }}>
-                    <span>Comisión Plataforma Mándalo!:</span>
-                    <span>${platformFee.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(platformFee)}</strong></span>
-                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: 10, fontWeight: 900 }}>
-                    <span style={{ fontSize: 15 }}>Total a Pagar:</span>
+                    <span style={{ fontSize: 15 }}>Total estimado:</span>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: 18, color: 'var(--brand-orange)' }}>
                         ${total.toFixed(2)}
@@ -360,10 +259,12 @@ export function CartModal({
                 Seguir Comprando
               </button>
               <button 
-                type="submit" 
+                type="submit"
+                disabled={!canOrder}
+                title={!canOrder ? (subscriptionState.expired ? 'Suscripción vencida' : 'Comercio pendiente de validación') : undefined}
                 className="btn-brand w-full sm:w-auto min-h-[48px] font-extrabold text-sm sm:text-base flex-1 shadow-lg shadow-orange-500/25"
               >
-                Confirmar Orden (${total.toFixed(2)} / {totalBsFormatted})
+                {canOrder ? `Confirmar Orden ($${total.toFixed(2)} / ${totalBsFormatted})` : 'Pedidos no disponibles'}
               </button>
             </div>
           )}

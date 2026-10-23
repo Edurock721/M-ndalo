@@ -3,7 +3,6 @@ import {
   Bike, 
   MapPin, 
   Navigation, 
-  DollarSign, 
   CheckCircle2, 
   Clock, 
   MessageSquare, 
@@ -31,7 +30,6 @@ export function RiderView({
   exchangeRate = 884.75
 }) {
   const formatBs = (usd) => `Bs. ${(Number(usd || 0) * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const formatUSD = (usd) => `$${Number(usd || 0).toFixed(2)}`;
 
   const [activeTab, setActiveTab] = useState('radar'); // 'radar' | 'my_deliveries' | 'history'
 
@@ -65,9 +63,6 @@ export function RiderView({
 
   // Completed deliveries
   const myCompletedOrders = orders.filter((o) => o.rider_id === currentUser.id && o.status === 'delivered');
-
-  // Total rider earnings
-  const totalEarnings = myCompletedOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
 
   // Delivery celebration trigger
   const handleCompleteDelivery = (orderId) => {
@@ -112,9 +107,7 @@ export function RiderView({
               <h2 style={{ fontSize: 20, fontWeight: 800 }}>{currentUser.full_name}</h2>
               <span className="badge badge-mandadito">En Línea 🟢</span>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              {currentUser.phone} • Saldo acumulado: <strong style={{ color: '#00F2FE' }}>${currentUser.walletBalance.toFixed(2)}</strong> <span style={{ color: '#FBBF24', fontWeight: 700 }}>· {formatBs(currentUser.walletBalance)}</span>
-            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{currentUser.phone}</p>
           </div>
         </div>
 
@@ -550,7 +543,7 @@ export function RiderView({
                         borderRadius: 'var(--radius-sm)',
                         fontSize: 12.5
                       }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Monto a cobrar ({ord.payment_method.toUpperCase()}):</span>
+                        <span style={{ color: 'var(--text-muted)' }}>Pago directo acordado:</span>
                         <span style={{ color: '#FBBF24', fontWeight: 800 }}>${ord.total?.toFixed(2)} · {formatBs(ord.total)}</span>
                       </div>
 
@@ -560,7 +553,7 @@ export function RiderView({
                         style={{ width: '100%', padding: '12px', fontSize: 13.5 }}
                       >
                         <CheckCircle2 size={18} />
-                        <span>Marcar Como Entregado (Cobrar +${ord.delivery_fee.toFixed(2)} / {formatBs(ord.delivery_fee)})</span>
+                        <span>Marcar como entregado</span>
                       </button>
                     </div>
 
@@ -589,14 +582,7 @@ export function RiderView({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h3 style={{ fontSize: 18 }}>Historial de Despachos Entregados</h3>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#10B981' }}>
-                Total Ganado: ${totalEarnings.toFixed(2)}
-              </span>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#FBBF24' }}>
-                {formatBs(totalEarnings)}
-              </div>
-            </div>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{myCompletedOrders.length} entregas</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -612,10 +598,6 @@ export function RiderView({
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#10B981', fontSize: 15 }}>+${ord.delivery_fee.toFixed(2)}</strong>
-                  <div style={{ fontSize: 11.5, color: '#FBBF24', fontWeight: 700 }}>
-                    {formatBs(ord.delivery_fee)}
-                  </div>
                   <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                     {new Date(ord.created_at).toLocaleDateString()}
                   </div>

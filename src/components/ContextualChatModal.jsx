@@ -88,7 +88,7 @@ export function ContextualChatModal({
       return [
         '🍳 Su pedido está en preparación',
         '📦 Pedido empacado y listo para retiro',
-        '👍 Recibido el comprobante de Pago Móvil',
+        '👍 Gracias, ya vi tu mensaje',
         '🥤 ¿Desea salsa extra?'
       ];
     }
@@ -96,7 +96,7 @@ export function ContextualChatModal({
       '🏠 Portón blanco con reja negra',
       '🏃‍♂️ Ya salgo a recibir a la puerta',
       '💵 Tengo el efectivo exacto listo',
-      '✅ Pago Móvil realizado y verificado'
+      '✅ Ya coordiné el pago directamente con el comercio'
     ];
   };
 

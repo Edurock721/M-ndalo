@@ -58,7 +58,6 @@ export function DeliveryPool() {
     vehicleType: profile?.vehicle_type || user?.user_metadata?.vehicle_type || 'moto',
     vehiclePlate: profile?.vehicle_plate || user?.user_metadata?.vehicle_plate || 'AB123CD',
     vehicleModel: profile?.vehicle_model || user?.user_metadata?.vehicle_model || 'Bera SBR 150',
-    walletBalance: Number(profile?.wallet_balance ?? 18.00),
     isVerified: profile?.is_verified ?? true
   };
 
@@ -156,13 +155,6 @@ export function DeliveryPool() {
           </div>
 
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-800">
-            <div className="bg-[#0D1322] border border-gray-800 px-4 py-2.5 rounded-2xl">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-bold">Tu Saldo</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-black text-white font-mono">${activeDriver.walletBalance.toFixed(2)}</span>
-                <span className="text-xs text-amber-400 font-mono font-bold">≈ Bs. {(activeDriver.walletBalance * currentRate).toFixed(2)}</span>
-              </div>
-            </div>
             <div className="bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-bold text-emerald-400">
               <ShieldCheck className="w-4 h-4" />
               <span>Verificado</span>

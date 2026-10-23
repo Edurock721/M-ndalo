@@ -7,6 +7,7 @@ import {
   INITIAL_MESSAGES 
 } from './mockData';
 import { soundManager } from './soundEffects';
+import { canPublishProduct, canReceiveOrders, DEFAULT_PAYMENT_CONFIG, DEFAULT_PAYMENT_METHODS } from './merchantSubscription';
 
 const STORAGE_KEYS = {
   CONFIG: 'mandalo_supabase_config',
@@ -103,8 +104,17 @@ class LocalStore {
 
   loadFromStorage() {
     try {
-      this.profiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILES)) || INITIAL_PROFILES;
-      this.merchants = JSON.parse(localStorage.getItem(STORAGE_KEYS.MERCHANTS)) || INITIAL_MERCHANTS;
+      this.profiles = (JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILES)) || INITIAL_PROFILES)
+        .map(({ wallet_balance, ...profile }) => profile);
+      this.merchants = (JSON.parse(localStorage.getItem(STORAGE_KEYS.MERCHANTS)) || INITIAL_MERCHANTS)
+        .map(merchant => ({
+          ...merchant,
+          verified: merchant.verified ?? merchant.is_active ?? false,
+          plan: merchant.plan || 'free',
+          subscription_status: merchant.subscription_status || 'active',
+          payment_methods: { ...DEFAULT_PAYMENT_METHODS, ...(merchant.payment_methods || {}) },
+          payment_config: { ...DEFAULT_PAYMENT_CONFIG, ...(merchant.payment_config || {}) }
+        }));
       this.products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS)) || INITIAL_PRODUCTS;
       let storedOrders = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS)) || [];
       const existingIds = new Set(storedOrders.map(o => o.id));
@@ -112,9 +122,21 @@ class LocalStore {
       if (missingOrders.length > 0) {
         storedOrders = [...storedOrders, ...missingOrders];
       }
-      this.orders = storedOrders.length > 0 ? storedOrders : INITIAL_ORDERS;
+      this.orders = (storedOrders.length > 0 ? storedOrders : INITIAL_ORDERS).map(({
+        platform_fee,
+        payment_method,
+        payment_receipt_url,
+        pago_movil_ref,
+        ...order
+      }) => ({
+        ...order,
+        total: Math.max(0, Number(order.total || 0) - Number(platform_fee || 0))
+      }));
       this.messages = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES)) || INITIAL_MESSAGES;
       this.currentUserId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID) || 'user-client-1';
+      localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(this.profiles));
+      localStorage.setItem(STORAGE_KEYS.MERCHANTS, JSON.stringify(this.merchants));
+      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(this.orders));
     } catch (e) {
       console.warn('Error loading storage, resetting to initial', e);
       this.resetToDefaults();
@@ -181,6 +203,13 @@ class LocalStore {
   }
 
   createOrder(orderData) {
+    if (orderData.order_type === 'store_purchase') {
+      const merchant = this.merchants.find(item => item.id === orderData.merchant_id);
+      if (merchant && !canReceiveOrders(merchant)) {
+        throw new Error('Este comercio no puede recibir pedidos nuevos en este momento.');
+      }
+    }
+
     const newOrder = {
       id: `ord-${Date.now().toString().slice(-6)}`,
       created_at: new Date().toISOString(),
@@ -214,15 +243,6 @@ class LocalStore {
 
       if (newStatus === 'delivered') {
         soundManager.playSuccessFanfare();
-        // Credit rider wallet with delivery fee
-        if (order.rider_id) {
-          this.adjustWallet(order.rider_id, order.delivery_fee, `Ganancia despacho #${order.id.slice(-4)}`);
-        }
-        // Credit admin wallet with platform fee
-        const admin = this.profiles.find(p => p.role === 'admin');
-        if (admin) {
-          this.adjustWallet(admin.id, order.platform_fee || 0.50, `Comisión Mándalo! orden #${order.id.slice(-4)}`);
-        }
       } else {
         soundManager.playTap();
       }
@@ -262,6 +282,12 @@ class LocalStore {
   }
 
   async addProduct(productData) {
+    const merchant = this.merchants.find(item => item.id === productData.merchant_id);
+    const productCount = this.products.filter(item => item.merchant_id === productData.merchant_id).length;
+    if (merchant && !canPublishProduct(merchant, productCount)) {
+      throw new Error('El plan gratuito permite publicar hasta 10 productos.');
+    }
+
     const newProd = {
       id: `prod-${Date.now().toString().slice(-6)}`,
       is_available: true,
@@ -275,6 +301,7 @@ class LocalStore {
       const { supabase, isSupabaseConfigured } = await import('./supabaseClient');
       if (isSupabaseConfigured()) {
         const { data, error } = await supabase.from('products').insert([{
+            merchant_id: newProd.merchant_id,
           name: newProd.name,
           description: newProd.description,
           price: newProd.price,
@@ -324,15 +351,7 @@ class LocalStore {
     }
   }
 
-  // --- Profiles & Admin Wallet API ---
-  adjustWallet(userId, amount, reason = '') {
-    const user = this.profiles.find(p => p.id === userId);
-    if (user) {
-      user.wallet_balance = Math.max(0, parseFloat((user.wallet_balance + amount).toFixed(2)));
-      this.saveToStorage();
-    }
-  }
-
+  // --- Profiles & Merchants API ---
   toggleVerification(userId) {
     const user = this.profiles.find(p => p.id === userId);
     if (user) {
@@ -349,6 +368,46 @@ class LocalStore {
     }
   }
 
+  upsertMerchant(merchant) {
+    const idx = this.merchants.findIndex(item => item.id === merchant.id || (
+      merchant.owner_id && item.owner_id === merchant.owner_id
+    ));
+    if (idx === -1) this.merchants.unshift(merchant);
+    else this.merchants[idx] = { ...this.merchants[idx], ...merchant };
+    this.saveToStorage();
+  }
+
+  deleteMerchant(merchantId) {
+    this.merchants = this.merchants.filter(merchant => merchant.id !== merchantId);
+    this.saveToStorage();
+  }
+
+  upsertProducts(products) {
+    const productsById = new Map(this.products.map(product => [product.id, product]));
+    products.forEach(product => productsById.set(product.id, product));
+    this.products = [...productsById.values()];
+    this.saveToStorage();
+  }
+
+  async updateMerchant(merchantId, updates) {
+    const idx = this.merchants.findIndex(item => item.id === merchantId);
+    if (idx !== -1) {
+      this.merchants[idx] = { ...this.merchants[idx], ...updates, updated_at: new Date().toISOString() };
+      this.saveToStorage();
+    }
+
+    try {
+      const { supabase, isSupabaseConfigured } = await import('./supabaseClient');
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.from('merchants').update(updates).eq('id', merchantId);
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error al actualizar el comercio:', error);
+      throw error;
+    }
+  }
+
   updateProfile(userId, updates) {
     const idx = this.profiles.findIndex(p => p.id === userId);
     if (idx !== -1) {
@@ -360,12 +419,17 @@ class LocalStore {
             ...this.merchants[mIdx],
             name: updates.merchant_name || updates.full_name || this.merchants[mIdx].name,
             address: updates.address || this.merchants[mIdx].address,
-            phone: updates.phone || this.merchants[mIdx].phone
+            phone: updates.phone || this.merchants[mIdx].phone,
+            ...(typeof updates.verified === 'boolean' ? { verified: updates.verified, is_active: updates.verified } : {})
           };
         }
       }
       this.saveToStorage();
+      return;
     }
+
+    this.profiles.unshift({ id: userId, ...updates, updated_at: new Date().toISOString() });
+    this.saveToStorage();
   }
 
   deleteProfile(userId) {

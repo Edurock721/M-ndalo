@@ -11,9 +11,6 @@ import {
   Package, 
   Sparkles, 
   X, 
-  UploadCloud, 
-  Check, 
-  DollarSign,
   ChevronRight,
   AlertCircle,
   User,
@@ -21,10 +18,10 @@ import {
   Car,
   AlertTriangle
 } from 'lucide-react';
-import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
 import { GpsLocationPicker } from './GpsLocationPicker';
 import { handleImageError } from '../lib/imageFallback';
+import { canReceiveOrders, getSubscriptionState, isMerchantVisible } from '../lib/merchantSubscription';
 
 export function ClientView({ 
   merchants, 
@@ -53,49 +50,28 @@ export function ClientView({
     delivery_address: '',
     task_description: '',
     notes: '',
-    purchase_budget: '0.00',
-    payment_method: 'pago_movil',
-    payment_receipt_url: null,
-    pago_movil_ref: ''
+    purchase_budget: '0.00'
   });
-  const [mandaditoReceiptPreview, setMandaditoReceiptPreview] = useState(null);
   const [mandaditoPickupCoords, setMandaditoPickupCoords] = useState(null);
   const [mandaditoDeliveryCoords, setMandaditoDeliveryCoords] = useState(null);
-  const [isCompressingReceipt, setIsCompressingReceipt] = useState(false);
 
   // Categories
   const categories = ['Todos', 'Comida Rápida', 'Salud & Farmacia', 'Licores & Snacks', 'Panadería & Café'];
 
   // Filter merchants
   const filteredMerchants = merchants.filter((m) => {
-    if (!m.is_active) return false;
+    if (!isMerchantVisible(m)) return false;
     const matchesCategory = selectedCategory === 'Todos' || m.category === selectedCategory;
     const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           m.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
+  }).sort((first, second) => {
+    const planPriority = { pro: 0, trial: 1, free: 2 };
+    return (planPriority[first.plan] ?? 3) - (planPriority[second.plan] ?? 3);
   });
 
   // Client's active orders
   const clientOrders = orders.filter((o) => o.client_id === currentUser.id);
-
-  // Mandadito receipt compression handler
-  const handleMandaditoReceiptUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsCompressingReceipt(true);
-      const res = await compressImageToWebP(file);
-      setMandaditoReceiptPreview(res.dataUrl);
-      setMandaditoForm(prev => ({ ...prev, payment_receipt_url: res.dataUrl }));
-      soundManager.playTap();
-    } catch (err) {
-      console.error('Error compressing receipt:', err);
-      alert('Error al procesar el comprobante.');
-    } finally {
-      setIsCompressingReceipt(false);
-    }
-  };
 
   const handleCreateMandaditoSubmit = (e) => {
     e.preventDefault();
@@ -114,8 +90,7 @@ export function ClientView({
     } else if (isHeavy) {
       delivery_fee = 3.50;
     }
-    const platform_fee = 0.50;
-    const total = (isRide ? 0 : budget) + delivery_fee + platform_fee;
+    const total = (isRide ? 0 : budget) + delivery_fee;
 
     const taskDesc = mandaditoForm.task_description.trim() || (isRide 
       ? `Carrera para ${mandaditoForm.passenger_count || 1} persona(s)`
@@ -143,11 +118,7 @@ export function ClientView({
       purchase_budget: isRide ? 0 : budget,
       subtotal: 0,
       delivery_fee,
-      platform_fee,
-      total,
-      payment_method: mandaditoForm.payment_method,
-      payment_receipt_url: mandaditoForm.payment_receipt_url,
-      pago_movil_ref: mandaditoForm.pago_movil_ref || null
+      total
     });
 
     setShowMandaditoModal(false);
@@ -159,14 +130,10 @@ export function ClientView({
       delivery_address: '',
       task_description: '',
       notes: '',
-      purchase_budget: '0.00',
-      payment_method: 'pago_movil',
-      payment_receipt_url: null,
-      pago_movil_ref: ''
+      purchase_budget: '0.00'
     });
     setMandaditoPickupCoords(null);
     setMandaditoDeliveryCoords(null);
-    setMandaditoReceiptPreview(null);
   };
 
   return (
@@ -387,7 +354,7 @@ export function ClientView({
               </p>
             </div>
             <div className="text-xs text-gray-400 font-medium">
-              <span className="font-bold text-white font-mono text-sm">{filteredMerchants.length}</span> comercios activos
+              <span className="font-bold text-white font-mono text-sm">{filteredMerchants.length}</span> comercios
             </div>
           </div>
 
@@ -490,6 +457,11 @@ export function ClientView({
                   <Star size={12} fill="#FBBF24" strokeWidth={0} />
                   {merchant.rating}
                 </span>
+                {(merchant.plan === 'trial' || merchant.plan === 'pro') && (
+                  <span style={{ position: 'absolute', top: 10, left: 10, padding: '4px 8px', borderRadius: 6, background: merchant.plan === 'pro' ? '#0284C7' : '#10B981', color: '#FFFFFF', fontSize: 10, fontWeight: 800 }}>
+                    {merchant.plan === 'pro' ? 'PRIORIDAD PRO' : 'DESTACADO · PRUEBA'}
+                  </span>
+                )}
                 <span style={{
                   position: 'absolute',
                   bottom: 10,
@@ -534,6 +506,13 @@ export function ClientView({
                     Delivery ${merchant.delivery_fee.toFixed(2)} · <span style={{ fontSize: 11, color: '#6EE7B7' }}>{formatBs(merchant.delivery_fee)}</span>
                   </span>
                 </div>
+                <p style={{ fontSize: 11, color: canReceiveOrders(merchant) ? '#6EE7B7' : '#FBBF24', marginTop: 8, fontWeight: 700 }}>
+                  {canReceiveOrders(merchant)
+                    ? 'Pedidos disponibles'
+                    : getSubscriptionState(merchant).expired
+                      ? 'Suscripción vencida'
+                      : 'Pendiente de validación'}
+                </p>
               </div>
             </div>
           ))}
@@ -574,6 +553,13 @@ export function ClientView({
 
             <div className="modal-body" style={{ padding: 18 }}>
               <h4 style={{ fontSize: 16, marginBottom: 14 }}>Catálogo Digital Disponible</h4>
+              {!canReceiveOrders(selectedMerchant) && (
+                <div style={{ padding: 12, marginBottom: 14, borderRadius: 'var(--radius-md)', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#FBBF24', fontSize: 13 }}>
+                  {getSubscriptionState(selectedMerchant).expired
+                    ? 'Tu suscripción ha vencido. Renueva para seguir recibiendo pedidos.'
+                    : 'Este comercio está pendiente de validación. El catálogo permanece visible.'}
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {products
@@ -621,12 +607,13 @@ export function ClientView({
                             </div>
 
                             <button
+                              disabled={!canReceiveOrders(selectedMerchant)}
                               onClick={() => {
                                 soundManager.playTap();
                                 onAddToCart(product, selectedMerchant, itemNote[product.id] || '');
                                 setItemNote(prev => ({ ...prev, [product.id]: '' }));
                               }}
-                              className="btn-brand min-h-[42px] px-5 py-2.5 flex items-center gap-2 text-sm font-extrabold shadow-md shadow-orange-500/20 active:scale-95"
+                              className="btn-brand min-h-[42px] px-5 py-2.5 flex items-center gap-2 text-sm font-extrabold shadow-md shadow-orange-500/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Plus size={18} strokeWidth={2.5} />
                               <span>Agregar</span>
@@ -940,86 +927,19 @@ export function ClientView({
                     </div>
                   )}
 
-                  <div className="input-group">
-                    <label className="input-label">Método de Pago</label>
-                    <select
-                      value={mandaditoForm.payment_method}
-                      onChange={(e) => setMandaditoForm({ ...mandaditoForm, payment_method: e.target.value })}
-                      className="input-field"
-                      style={{ background: 'var(--bg-surface-elevated)' }}
-                    >
-                      <option value="pago_movil">Pago Móvil (Bs)</option>
-                      <option value="cash_usd">Efectivo USD ($)</option>
-                      <option value="cash_bs">Efectivo Bolívares (Bs)</option>
-                    </select>
-                  </div>
                 </div>
 
-                {/* Pago Movil comprobante uploader if selected */}
-                {mandaditoForm.payment_method === 'pago_movil' && (
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 14,
-                    marginBottom: 16
-                  }}>
-                    <label className="input-label" style={{ color: 'var(--brand-orange)' }}>
-                      Datos Pago Móvil MÁNDALO!: Banesco (0134) • 0414-5551234 • CI: 22.333.444
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Número de Referencia (últimos 6 dígitos)"
-                      value={mandaditoForm.pago_movil_ref}
-                      onChange={(e) => setMandaditoForm({ ...mandaditoForm, pago_movil_ref: e.target.value })}
-                      className="input-field"
-                      style={{ marginBottom: 10 }}
-                    />
-
-                    {/* Image compressor uploader */}
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: 10,
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px dashed var(--border-subtle)',
-                      background: 'rgba(0, 242, 254, 0.05)',
-                      cursor: 'pointer',
-                      fontSize: 12.5,
-                      color: '#38BDF8'
-                    }}>
-                      <UploadCloud size={18} />
-                      <span>{isCompressingReceipt ? 'Comprimiendo a WebP...' : 'Adjuntar captura de Pago Móvil (Auto WebP < 120KB)'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={handleMandaditoReceiptUpload}
-                      />
-                    </label>
-
-                    {mandaditoReceiptPreview && (
-                      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <img
-                          src={mandaditoReceiptPreview}
-                          alt="Comprobante"
-                          style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }}
-                        />
-                        <span style={{ fontSize: 12, color: '#10B981' }}>✓ Comprobante optimizado en WebP</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  El monto es referencial. Cualquier pago se coordina directamente entre las personas involucradas; Mándalo no procesa ni recibe fondos.
+                </p>
 
                 {/* Cost Breakdown */}
                 {(() => {
                   const isRide = mandaditoForm.order_type === 'ride';
                   const isHeavy = mandaditoForm.cargo_size === 'heavy';
                   const deliveryFee = isRide ? (mandaditoForm.passenger_count > 2 ? 3.50 : 2.50) : isHeavy ? 3.50 : 2.00;
-                  const platformFee = 0.50;
                   const budget = isRide ? 0 : (parseFloat(mandaditoForm.purchase_budget) || 0);
-                  const total = deliveryFee + platformFee + budget;
+                  const total = deliveryFee + budget;
 
                   return (
                     <div style={{
@@ -1031,10 +951,6 @@ export function ClientView({
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
                         <span>{isRide ? 'Tarifa Carrera / Traslado:' : isHeavy ? 'Tarifa Carga Pesada:' : 'Tarifa Mandadito Ligero:'}</span>
                         <span>${deliveryFee.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(deliveryFee)}</strong></span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
-                        <span>Comisión de Servicio:</span>
-                        <span>${platformFee.toFixed(2)} · <strong style={{ color: '#E2E8F0' }}>{formatBs(platformFee)}</strong></span>
                       </div>
                       {budget > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>

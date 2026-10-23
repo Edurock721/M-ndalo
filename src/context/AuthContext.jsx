@@ -177,23 +177,21 @@ export function AuthProvider({ children }) {
   // Actualizar estado de verificación de un usuario (para Administrador)
   const updateUserVerification = async (userId, isVerified) => {
     if (isConfigured) {
-      try {
-        await supabase
-          .from('profiles')
-          .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
-          .eq('id', userId);
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (profileError) throw profileError;
 
-        await supabase
-          .from('merchants')
-          .update({ is_active: isVerified })
-          .eq('owner_id', userId);
-      } catch (e) {
-        console.error('Error al actualizar verificación en Supabase:', e);
-      }
+      const { error: merchantError } = await supabase.rpc('admin_set_merchant_verified', {
+        p_owner_id: userId,
+        p_verified: isVerified
+      });
+      if (merchantError) throw merchantError;
     }
 
     // Actualizar también en el store local para reactividad inmediata
-    localStore.updateProfile(userId, { is_verified: isVerified });
+    localStore.updateProfile(userId, { is_verified: isVerified, verified: isVerified });
     if (user?.id === userId) {
       await refreshProfile();
     }
@@ -218,13 +216,19 @@ export function AuthProvider({ children }) {
           if (updates.merchant_name) merchantUpdates.name = updates.merchant_name;
           if (updates.address) merchantUpdates.address = updates.address;
           if (updates.phone) merchantUpdates.phone = updates.phone;
-          if (typeof updates.is_verified === 'boolean') merchantUpdates.is_active = updates.is_verified;
           
           if (Object.keys(merchantUpdates).length > 0) {
             await supabase
               .from('merchants')
               .update(merchantUpdates)
               .eq('owner_id', userId);
+          }
+          if (typeof updates.is_verified === 'boolean') {
+            const { error: verificationError } = await supabase.rpc('admin_set_merchant_verified', {
+              p_owner_id: userId,
+              p_verified: updates.is_verified
+            });
+            if (verificationError) throw verificationError;
           }
         }
       } catch (e) {
@@ -312,8 +316,7 @@ export function AuthProvider({ children }) {
       manager_name: role === 'merchant' ? 'Roberto Gómez' : null,
       merchant_rif: role === 'merchant' ? 'J-40192834-1' : null,
       merchant_category: role === 'merchant' ? 'Comida Rápida' : null,
-      is_verified: role === 'client' || role === 'admin' ? true : verified,
-      wallet_balance: role === 'client' ? 35.00 : role === 'rider' ? 22.50 : (role === 'merchant' ? 180.00 : 500.00)
+      is_verified: role === 'client' || role === 'admin' ? true : verified
     };
 
     setUser(demoUser);

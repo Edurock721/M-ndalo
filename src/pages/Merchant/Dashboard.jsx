@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { localStore } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 import { exchangeRateService } from '../../lib/exchangeRate';
 import { MerchantView } from '../../components/MerchantView';
 import { ContextualChatModal } from '../../components/ContextualChatModal';
@@ -32,6 +33,26 @@ export function Dashboard() {
   const [activeChatOrder, setActiveChatOrder] = useState(null);
 
   useEffect(() => {
+    if (user?.id && isSupabaseConfigured()) {
+      supabase
+        .from('merchants')
+        .select('*')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+        .then(async ({ data, error }) => {
+          if (error) console.error('No se pudo cargar la tienda del comercio:', error);
+          if (data) {
+            localStore.upsertMerchant(data);
+            const { data: products, error: productsError } = await supabase
+              .from('products')
+              .select('*')
+              .eq('merchant_id', data.id);
+            if (productsError) console.error('No se pudo cargar el catálogo del comercio:', productsError);
+            else if (products) localStore.upsertProducts(products);
+          }
+        });
+    }
+
     const unsubStore = localStore.subscribe(() => {
       setStoreState({
         merchants: [...localStore.merchants],
@@ -49,24 +70,30 @@ export function Dashboard() {
       unsubStore();
       unsubRate();
     };
-  }, []);
+  }, [user?.id]);
 
   const activeMerchantUser = {
     id: user?.id || 'merchant-1',
     name: profile?.full_name || user?.user_metadata?.full_name || 'Comercio Mándalo',
     phone: profile?.phone || user?.user_metadata?.phone || '0414-0000000',
     role: 'merchant',
-    walletBalance: Number(profile?.wallet_balance ?? 142.50),
     isVerified: profile?.is_verified ?? true
   };
 
-  const currentMerchant = storeState.merchants[0] || {
+  const currentMerchant = storeState.merchants.find(merchant => merchant.owner_id === user?.id)
+    || storeState.merchants.find(merchant => merchant.owner_id === 'user-merchant-1')
+    || {
     id: 'merch-1',
+    owner_id: user?.id,
     name: activeMerchantUser.name,
     category: 'Comida Rápida',
     address: 'Av. Bolívar, Centro Comercial Mándalo',
     rating: 4.9,
-    delivery_time: '25-35 min'
+    delivery_time: '25-35 min',
+    plan: 'trial',
+    subscription_status: 'active',
+    verified: activeMerchantUser.isVerified,
+    is_active: activeMerchantUser.isVerified
   };
 
   const currentRate = rateData.rate;
@@ -140,20 +167,18 @@ export function Dashboard() {
               <p className="text-sm sm:text-base font-bold text-white">
                 {currentMerchant.address}
               </p>
+              <p className="text-xs sm:text-sm font-semibold text-emerald-300 mt-1">Quédate con el 100% de tus ventas.</p>
             </div>
           </div>
 
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-800">
             <div className="bg-[#0D1322] border border-gray-800 px-4 py-2.5 rounded-2xl">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-bold">Balance de Ventas</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-black text-white font-mono">${activeMerchantUser.walletBalance.toFixed(2)}</span>
-                <span className="text-xs text-amber-400 font-mono font-bold">≈ Bs. {(activeMerchantUser.walletBalance * currentRate).toFixed(2)}</span>
-              </div>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-bold">Plan actual</span>
+              <div className="text-lg font-black text-white">{(currentMerchant.plan || 'trial').toUpperCase()}</div>
             </div>
             <div className="bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-bold text-emerald-400">
               <ShieldCheck className="w-4 h-4" />
-              <span>Afiliado Activo</span>
+              <span>{(currentMerchant.verified ?? currentMerchant.is_active) ? 'Comercio aprobado' : 'Pendiente de validación'}</span>
             </div>
           </div>
         </div>
@@ -171,6 +196,7 @@ export function Dashboard() {
           onUpdateProduct={(id, updates) => localStore.updateProduct(id, updates)}
           onDeleteProduct={(id) => localStore.deleteProduct(id)}
           onOpenChat={(order) => setActiveChatOrder(order)}
+          onUpdateMerchant={(id, updates) => localStore.updateMerchant(id, updates)}
           exchangeRate={currentRate}
         />
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Store, 
   Package, 
@@ -6,12 +6,10 @@ import {
   Check, 
   X, 
   Clock, 
-  Eye, 
   UploadCloud, 
   MessageSquare, 
   AlertTriangle,
   TrendingUp,
-  DollarSign,
   ToggleLeft,
   ToggleRight,
   Bell,
@@ -23,6 +21,7 @@ import {
 import { compressImageToWebP } from '../lib/imageCompression';
 import { soundManager } from '../lib/soundEffects';
 import { handleImageError } from '../lib/imageFallback';
+import { canPublishProduct, getPaymentConfig, getPaymentMethods, getSubscriptionState, PAYMENT_METHOD_OPTIONS } from '../lib/merchantSubscription';
 
 export function MerchantView({ 
   merchant, 
@@ -34,14 +33,16 @@ export function MerchantView({
   onUpdateProduct, 
   onDeleteProduct, 
   onOpenChat,
+  onUpdateMerchant,
   exchangeRate = 884.75
 }) {
   const formatBs = (usd) => `Bs. ${(Number(usd || 0) * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formatUSD = (usd) => `$${Number(usd || 0).toFixed(2)}`;
 
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'catalog' | 'stats'
+  const [activeTab, setActiveTab] = useState('orders');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [paymentMethods, setPaymentMethods] = useState(() => getPaymentMethods(merchant));
+  const [paymentConfig, setPaymentConfig] = useState(() => getPaymentConfig(merchant));
 
   // New product form state
   const [newProductForm, setNewProductForm] = useState({
@@ -69,12 +70,21 @@ export function MerchantView({
 
   // Filter orders for this merchant
   const merchantOrders = orders.filter((o) => o.merchant_id === merchant?.id);
+  const merchantProducts = products.filter((product) => product.merchant_id === merchant?.id);
+  const subscription = getSubscriptionState(merchant);
+  const canAddProduct = canPublishProduct(merchant, merchantProducts.length);
   const pendingOrders = merchantOrders.filter((o) => o.status === 'pending');
   const activeOrders = merchantOrders.filter((o) => ['accepted', 'preparing', 'ready_for_pickup', 'on_way'].includes(o.status));
   const completedOrders = merchantOrders.filter((o) => o.status === 'delivered');
 
   // Stats
   const totalSales = completedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
+  const clientsServed = new Set(merchantOrders.map(order => order.client_id).filter(Boolean)).size;
+
+  useEffect(() => {
+    setPaymentMethods(getPaymentMethods(merchant));
+    setPaymentConfig(getPaymentConfig(merchant));
+  }, [merchant]);
 
   // Handle product image compress for new product
   const handleProductImageUpload = async (e) => {
@@ -116,6 +126,10 @@ export function MerchantView({
   const handleCreateProduct = (e) => {
     e.preventDefault();
     if (!newProductForm.name.trim() || !newProductForm.price) return;
+    if (!canPublishProduct(merchant, merchantProducts.length)) {
+      alert('El plan gratuito permite publicar hasta 10 productos.');
+      return;
+    }
 
     onAddProduct({
       merchant_id: merchant.id,
@@ -226,7 +240,8 @@ export function MerchantView({
           {[
             { id: 'orders', label: `Órdenes (${pendingOrders.length + activeOrders.length})`, count: pendingOrders.length },
             { id: 'catalog', label: 'Catálogo de Productos' },
-            { id: 'stats', label: 'Métricas' }
+            { id: 'stats', label: 'Métricas' },
+            { id: 'settings', label: 'Suscripción y pagos' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -270,6 +285,17 @@ export function MerchantView({
           ))}
         </div>
       </div>
+
+      {subscription.plan === 'trial' && !subscription.expired && subscription.daysRemaining !== null && (
+        <div className="glass-panel" style={{ padding: 14, marginBottom: 16, borderColor: 'rgba(245, 158, 11, 0.4)', color: '#FBBF24' }}>
+          Te quedan {subscription.daysRemaining} días de prueba gratuita.
+        </div>
+      )}
+      {subscription.expired && (
+        <div className="glass-panel" role="alert" style={{ padding: 14, marginBottom: 16, borderColor: 'rgba(239, 68, 68, 0.45)', color: '#FCA5A5' }}>
+          Tu suscripción ha vencido. Renueva para seguir recibiendo pedidos.
+        </div>
+      )}
 
       {/* Tab: Orders Management */}
       {activeTab === 'orders' && (
@@ -315,25 +341,9 @@ export function MerchantView({
                       </div>
                     </div>
 
-                    {/* Payment info & receipt */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, fontSize: 12 }}>
-                      <div>
-                        <span style={{ color: 'var(--text-dim)' }}>Método:</span> <strong>{ord.payment_method.toUpperCase()}</strong>
-                        {ord.pago_movil_ref && <div style={{ color: '#38BDF8' }}>Ref: {ord.pago_movil_ref}</div>}
-                      </div>
-
-                      {ord.payment_receipt_url && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedReceipt(ord.payment_receipt_url)}
-                          className="btn-outline"
-                          style={{ padding: '4px 10px', fontSize: 11 }}
-                        >
-                          <Eye size={13} />
-                          <span>Ver Comprobante</span>
-                        </button>
-                      )}
-                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+                      El pago se coordina directamente entre el cliente y el comercio. Mándalo no procesa pagos.
+                    </p>
 
                     {/* Action buttons */}
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -480,14 +490,15 @@ export function MerchantView({
 
               <button
                 type="button"
+                disabled={!canAddProduct}
                 onClick={() => {
                   soundManager.playTap();
                   setShowAddProductModal(true);
                 }}
-                className="btn-brand w-full sm:w-auto min-h-[48px] shadow-lg shadow-orange-500/25 cursor-pointer flex items-center justify-center gap-2"
+                className="btn-brand w-full sm:w-auto min-h-[48px] shadow-lg shadow-orange-500/25 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Plus size={18} />
-                <span>+ Agregar Nuevo Producto</span>
+                <span>{canAddProduct ? '+ Agregar Nuevo Producto' : 'Límite de 10 productos alcanzado'}</span>
               </button>
             </div>
           </div>
@@ -603,7 +614,17 @@ export function MerchantView({
 
       {/* Tab: Stats */}
       {activeTab === 'stats' && (
+        merchant.plan === 'free' ? (
+          <div className="glass-panel" style={{ padding: 20 }}>
+            Las estadísticas avanzadas están disponibles durante la prueba y en el plan Pro.
+          </div>
+        ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 16 }}>
+          <div className="glass-panel" style={{ padding: 20 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Pedidos recibidos</span>
+            <h3 style={{ fontSize: 26, color: 'var(--brand-orange)', marginTop: 4 }}>{merchantOrders.length}</h3>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Pedidos registrados para tu tienda</span>
+          </div>
           <div className="glass-panel" style={{ padding: 20 }}>
             <span style={{ fontSize: 12, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Ventas Totales</span>
             <h3 style={{ fontSize: 26, color: '#10B981', marginTop: 4 }}>${totalSales.toFixed(2)}</h3>
@@ -622,6 +643,83 @@ export function MerchantView({
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin comisiones ocultas</span>
           </div>
         </div>
+        )
+      )}
+
+      {activeTab === 'settings' && (
+        <section className="glass-panel" style={{ padding: 20, display: 'grid', gap: 20 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 800 }}>Plan {subscription.plan.toUpperCase()}</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
+              Estado: {subscription.expired ? 'Vencido' : subscription.status === 'active' ? 'Activo' : subscription.status} · Productos: {subscription.plan === 'free' ? 'hasta 10' : 'ilimitados'}
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
+              {subscription.plan === 'trial'
+                ? 'Prueba de 30 días: todas las funciones desbloqueadas, productos y pedidos ilimitados, tienda destacada y estadísticas completas.'
+                : subscription.plan === 'free'
+                  ? 'Plan gratuito: perfil comercial, recepción de pedidos y presencia en búsquedas; máximo 10 productos.'
+                  : 'Plan Pro: USD $9.99 mensuales sugeridos, productos y pedidos ilimitados, verificación, estadísticas avanzadas, prioridad, promociones y soporte prioritario.'}
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>La suscripción se gestiona fuera de Mandalo.</p>
+          </div>
+
+          <div>
+            <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Métodos que verá el cliente</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {PAYMENT_METHOD_OPTIONS.map(method => (
+                <label key={method.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: 10, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(paymentMethods[method.id])}
+                    onChange={event => setPaymentMethods(current => ({ ...current, [method.id]: event.target.checked }))}
+                  />
+                  {method.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Datos para pago directo</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {[
+                ['titular', 'Titular'],
+                ['cedula', 'Cédula'],
+                ['telefonoPagoMovil', 'Teléfono Pago Móvil'],
+                ['banco', 'Banco'],
+                ['numeroCuenta', 'Número de cuenta']
+              ].map(([key, label]) => (
+                <label key={key} style={{ display: 'grid', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
+                  {label}
+                  <input
+                    value={paymentConfig[key] || ''}
+                    onChange={event => setPaymentConfig(current => ({ ...current, [key]: event.target.value }))}
+                    className="input-field"
+                  />
+                </label>
+              ))}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(paymentConfig.aceptaDivisas)}
+                  onChange={event => setPaymentConfig(current => ({ ...current, aceptaDivisas: event.target.checked }))}
+                />
+                Acepta divisas (USD)
+              </label>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="btn-brand"
+            onClick={async () => {
+              await onUpdateMerchant(merchant.id, { payment_methods: paymentMethods, payment_config: paymentConfig });
+              alert('Configuración guardada. Los pagos se realizan directamente al comercio.');
+            }}
+          >
+            Guardar configuración
+          </button>
+        </section>
       )}
 
       {/* Add Product Modal */}
@@ -925,24 +1023,6 @@ export function MerchantView({
         </div>
       )}
 
-      {/* Pago Movil Receipt Lightbox */}
-      {selectedReceipt && (
-        <div className="modal-overlay" onClick={() => setSelectedReceipt(null)}>
-          <div className="modal-content" style={{ maxWidth: 440, padding: 12 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <strong style={{ fontSize: 14 }}>Comprobante de Pago Móvil</strong>
-              <button onClick={() => setSelectedReceipt(null)} className="btn-icon">
-                <X size={18} />
-              </button>
-            </div>
-            <img
-              src={selectedReceipt}
-              alt="Comprobante Pago Móvil"
-              style={{ width: '100%', borderRadius: 8, display: 'block' }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
