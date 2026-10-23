@@ -272,11 +272,44 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
     RAISE EXCEPTION 'Solo un administrador puede validar comercios.';
   END IF;
+  
+  -- Actualizar tabla de comercios
   UPDATE public.merchants
   SET verified = p_verified, is_active = p_verified
   WHERE owner_id = p_owner_id;
+
+  -- Sincronizar también el perfil del propietario
+  UPDATE public.profiles
+  SET is_verified = p_verified, updated_at = NOW()
+  WHERE id = p_owner_id;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_user_verified(p_user_id UUID, p_verified BOOLEAN)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Solo un administrador puede cambiar la verificación.';
+  END IF;
+
+  -- Actualizar verificación en la tabla profiles (conductores, clientes, etc.)
+  UPDATE public.profiles
+  SET is_verified = p_verified, updated_at = NOW()
+  WHERE id = p_user_id;
+
+  -- Si el usuario resulta ser un comercio, sincronizar también la tienda
+  UPDATE public.merchants
+  SET verified = p_verified, is_active = p_verified
+  WHERE owner_id = p_user_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_set_merchant_verified(UUID, BOOLEAN) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_set_user_verified(UUID, BOOLEAN) TO authenticated;
 
 -- 4. TABLA DE PRODUCTOS
 CREATE TABLE IF NOT EXISTS public.products (

@@ -29,6 +29,10 @@ import {
   AlertTriangle,
   UserCheck,
   UserX,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export function AdminPortal() {
@@ -36,6 +40,7 @@ export function AdminPortal() {
     user, 
     profile, 
     signOut, 
+    updatePassword,
     updateUserVerification, 
     adminUpdateUser, 
     adminDeleteUser 
@@ -65,6 +70,14 @@ export function AdminPortal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionNotice, setActionNotice] = useState(null);
 
+  // Modal de cambio de contraseña del administrador
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
   // Sync with Supabase on mount and changes
   const fetchSupabaseProfiles = async () => {
     if (isSupabaseConfigured()) {
@@ -86,8 +99,9 @@ export function AdminPortal() {
             const merchant = loadedMerchants.find(item => item.owner_id === p.id);
             localStore.updateProfile(p.id, {
               ...p,
+              is_verified: p.is_verified ?? merchant?.verified ?? merchant?.is_active ?? false,
               merchant_id: merchant?.id,
-              verified: merchant?.verified,
+              verified: merchant?.verified ?? merchant?.is_active ?? p.is_verified,
               plan: merchant?.plan,
               subscription_status: merchant?.subscription_status,
               trial_start: merchant?.trial_start,
@@ -112,7 +126,7 @@ export function AdminPortal() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
           if (payload.eventType === 'DELETE') {
             localStore.deleteProfile(payload.old.id);
-          } else if (payload.new?.role === 'merchant') {
+          } else if (payload.new?.id) {
             localStore.updateProfile(payload.new.id, payload.new);
           }
         })
@@ -297,6 +311,33 @@ export function AdminPortal() {
     }
   };
 
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await updatePassword(newPassword);
+      showNotification('✓ Contraseña de Administrador actualizada con éxito');
+      setIsPasswordModalOpen(false);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordError(err.message || 'Error al actualizar la contraseña');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#070B14] text-white pb-24 font-sans selection:bg-orange-500 selection:text-white">
       
@@ -339,9 +380,24 @@ export function AdminPortal() {
             </div>
 
             <div className="hidden lg:flex flex-col text-right">
-              <span className="text-xs font-bold text-gray-200">{profile?.full_name || 'Admin'}</span>
+              <span className="text-xs font-bold text-gray-200">{profile?.full_name || 'Admin Central'}</span>
               <span className="text-[11px] text-gray-400">{user?.email || 'edurock721@gmail.com'}</span>
             </div>
+
+            {/* Botón para Cambiar Contraseña del Administrador */}
+            <button
+              onClick={() => {
+                setPasswordError('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setIsPasswordModalOpen(true);
+              }}
+              className="px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 hover:text-white text-xs sm:text-sm font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 min-h-[44px]"
+              title="Cambiar contraseña de Administrador"
+            >
+              <KeyRound className="w-4 h-4 text-orange-400 flex-shrink-0" strokeWidth={2.3} />
+              <span className="hidden md:inline text-xs sm:text-sm font-black">Cambiar Clave</span>
+            </button>
 
             {/* Botón Salir Grande y Fácil de Tocar */}
             <button
@@ -1258,6 +1314,106 @@ export function AdminPortal() {
                 <span>{isSubmitting ? 'Eliminando...' : 'Sí, Eliminar'}</span>
               </button>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL DE CAMBIO DE CONTRASEÑA DE ADMINISTRADOR */}
+      {/* ============================================================== */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#111827] border border-orange-500/40 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative space-y-6">
+            
+            {/* Botón Cerrar */}
+            <button 
+              onClick={() => setIsPasswordModalOpen(false)}
+              className="absolute top-5 right-5 w-9 h-9 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Cabecera */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center shadow-lg">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white">Cambiar Contraseña</h3>
+                <p className="text-xs text-gray-400">Actualiza las credenciales de tu cuenta administradora</p>
+              </div>
+            </div>
+
+            {passwordError && (
+              <div className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-400" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                  Nueva Contraseña
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                    minLength={6}
+                    className="w-full bg-[#18233D] border border-gray-700 focus:border-orange-500 rounded-xl px-10 py-3 text-sm text-white placeholder-gray-500 focus:outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-3.5 text-gray-400 hover:text-white cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                  Confirmar Nueva Contraseña
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repite la nueva contraseña"
+                    required
+                    minLength={6}
+                    className="w-full bg-[#18233D] border border-gray-700 focus:border-orange-500 rounded-xl px-10 py-3 text-sm text-white placeholder-gray-500 focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="flex-1 h-12 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-sm transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="flex-1 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition-all cursor-pointer"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  <span>{passwordLoading ? 'Guardando...' : 'Actualizar'}</span>
+                </button>
+              </div>
+            </form>
 
           </div>
         </div>

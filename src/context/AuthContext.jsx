@@ -174,25 +174,76 @@ export function AuthProvider({ children }) {
     return { user: data.user, session: null };
   };
 
+  // Comprobación de formato UUID válido para evitar errores 22P02 en Supabase con perfiles simulados
+  const isValidUuid = (id) => {
+    return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  };
+
   // Actualizar estado de verificación de un usuario (para Administrador)
   const updateUserVerification = async (userId, isVerified, role) => {
-    if (isConfigured) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
-        .eq('id', userId);
-      if (profileError) throw profileError;
+    // Si es un ID de Supabase válido y Supabase está configurado, sincronizar con la nube
+    if (isConfigured && isValidUuid(userId)) {
+      try {
+        // 1. Intentar actualizar en public.profiles
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
+          .eq('id', userId);
 
-      if (role === 'merchant') {
-        const { error: merchantError } = await supabase.rpc('admin_set_merchant_verified', {
-          p_owner_id: userId,
-          p_verified: isVerified
-        });
-        if (merchantError) throw merchantError;
+        if (profileError) {
+          console.warn('Advertencia actualizando profiles en Supabase:', profileError.message || profileError);
+          // Si el trigger o RLS restringe el update directo, intentar mediante RPC segura si existe
+          try {
+            await supabase.rpc('admin_set_user_verified', {
+              p_user_id: userId,
+              p_verified: isVerified
+            });
+          } catch (_) {}
+        }
+
+        // 2. Si es comercio, sincronizar también la tabla public.merchants
+        if (role === 'merchant') {
+          let rpcSuccess = false;
+          try {
+            const { error: merchantRpcError } = await supabase.rpc('admin_set_merchant_verified', {
+              p_owner_id: userId,
+              p_verified: isVerified
+            });
+            if (!merchantRpcError) {
+              rpcSuccess = true;
+            } else {
+              console.warn('RPC admin_set_merchant_verified no disponible:', merchantRpcError.message || merchantRpcError);
+            }
+          } catch (rpcErr) {
+            console.warn('Excepción al invocar RPC admin_set_merchant_verified:', rpcErr);
+          }
+
+          // Fallback directo a la tabla merchants si la función RPC aún no está en Supabase
+          if (!rpcSuccess) {
+            try {
+              const { error: directErr } = await supabase
+                .from('merchants')
+                .update({ is_active: isVerified, verified: isVerified })
+                .eq('owner_id', userId);
+
+              if (directErr) {
+                // Si la columna verified aún no fue migrada, actualizar sólo is_active
+                await supabase
+                  .from('merchants')
+                  .update({ is_active: isVerified })
+                  .eq('owner_id', userId);
+              }
+            } catch (fallbackErr) {
+              console.warn('Fallback update en merchants:', fallbackErr);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error general actualizando verificación en Supabase:', e);
       }
     }
 
-    // Actualizar también en el store local para reactividad inmediata
+    // Actualizar siempre en el store local para reactividad inmediata sin bloquear la UI
     localStore.updateProfile(userId, { is_verified: isVerified, verified: isVerified });
     if (user?.id === userId) {
       await refreshProfile();
@@ -201,7 +252,7 @@ export function AuthProvider({ children }) {
 
   // Actualizar datos de cualquier usuario (para Administrador)
   const adminUpdateUser = async (userId, updates) => {
-    if (isConfigured) {
+    if (isConfigured && isValidUuid(userId)) {
       try {
         const { error } = await supabase
           .from('profiles')
@@ -218,19 +269,33 @@ export function AuthProvider({ children }) {
           if (updates.merchant_name) merchantUpdates.name = updates.merchant_name;
           if (updates.address) merchantUpdates.address = updates.address;
           if (updates.phone) merchantUpdates.phone = updates.phone;
+          if (typeof updates.is_verified === 'boolean') {
+            merchantUpdates.is_active = updates.is_verified;
+            merchantUpdates.verified = updates.is_verified;
+          }
           
           if (Object.keys(merchantUpdates).length > 0) {
-            await supabase
+            const { error: mErr } = await supabase
               .from('merchants')
               .update(merchantUpdates)
               .eq('owner_id', userId);
+            
+            if (mErr) {
+              delete merchantUpdates.verified;
+              await supabase
+                .from('merchants')
+                .update(merchantUpdates)
+                .eq('owner_id', userId);
+            }
           }
+
           if (typeof updates.is_verified === 'boolean') {
-            const { error: verificationError } = await supabase.rpc('admin_set_merchant_verified', {
-              p_owner_id: userId,
-              p_verified: updates.is_verified
-            });
-            if (verificationError) throw verificationError;
+            try {
+              await supabase.rpc('admin_set_merchant_verified', {
+                p_owner_id: userId,
+                p_verified: updates.is_verified
+              });
+            } catch (_) {}
           }
         }
       } catch (e) {
@@ -248,7 +313,7 @@ export function AuthProvider({ children }) {
 
   // Eliminar usuario permanentemente (para Administrador)
   const adminDeleteUser = async (userId) => {
-    if (isConfigured) {
+    if (isConfigured && isValidUuid(userId)) {
       try {
         await supabase
           .from('merchants')
@@ -271,6 +336,27 @@ export function AuthProvider({ children }) {
     // Eliminar de localStore
     localStore.deleteProfile(userId);
     return true;
+  };
+
+  // Actualizar contraseña del usuario actual (Administrador o cualquier rol autenticado)
+  const updatePassword = async (newPassword) => {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('La nueva contraseña debe tener al menos 6 caracteres.');
+    }
+
+    if (isConfigured && session?.user) {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+      return { success: true, data };
+    }
+
+    // Modo simulador / local
+    return { success: true, simulated: true };
   };
 
   // Sign out
@@ -338,6 +424,7 @@ export function AuthProvider({ children }) {
         signIn,
         signUp,
         signOut,
+        updatePassword,
         refreshProfile,
         loginAsDemo,
         updateUserVerification,
