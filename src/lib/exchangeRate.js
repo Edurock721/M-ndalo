@@ -1,7 +1,7 @@
-// Service for Real-time BCV (Banco Central de Venezuela) Exchange Rate
-// Uses DolarApi (ve.dolarapi.com) with CORS enabled + fallback + localStorage caching
+// Service for the official BCV rate, read from the BCV page via Jina Reader.
+// The reader adds browser CORS support; the last successful rate stays cached locally.
 
-const BCV_API_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
+const BCV_READER_URL = 'https://r.jina.ai/http://www.bcv.org.ve/';
 const STORAGE_KEY_RATE = 'mandalo_bcv_rate';
 const STORAGE_KEY_DATE = 'mandalo_bcv_updated';
 export const DEFAULT_FALLBACK_RATE = 884.75; // Real official BCV rate
@@ -59,33 +59,52 @@ class ExchangeRateService {
     this.isFetching = true;
     this.error = null;
     this.notify();
+    let timeoutId;
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      timeoutId = setTimeout(() => controller.abort(), 25000);
 
-      const res = await fetch(BCV_API_URL, {
+      const res = await fetch(`${BCV_READER_URL}?nocache=${Date.now()}`, {
         signal: controller.signal,
-        headers: { 'Accept': 'application/json' }
+        cache: 'no-store',
+        headers: {
+          'Accept': 'text/plain',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
-      clearTimeout(timeoutId);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
-      if (data && typeof data.promedio === 'number' && data.promedio > 0) {
-        this.rate = parseFloat(data.promedio.toFixed(2));
-        this.lastUpdated = data.fechaActualizacion || new Date().toISOString();
-        try {
-          localStorage.setItem(STORAGE_KEY_RATE, this.rate.toString());
-          localStorage.setItem(STORAGE_KEY_DATE, this.lastUpdated);
-        } catch (e) {}
-        console.log(`[BCV API] Tasa oficial actualizada exitosamente: Bs. ${this.rate}`);
+      const page = await res.text();
+      const rateMatch = page.match(/dollar-[^\n)]*\)\s*USD\s*\*\*([\d.,]+)\*\*/i);
+      if (!rateMatch) throw new Error('No se encontró la tasa USD en la página oficial del BCV');
+
+      const rateText = rateMatch[1].trim();
+      const parsedRate = Number(rateText.includes(',')
+        ? rateText.replace(/\./g, '').replace(',', '.')
+        : rateText);
+      if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
+        throw new Error('La tasa recibida del BCV no es válida');
       }
+
+      this.rate = parseFloat(parsedRate.toFixed(2));
+      const publishedAt = page.match(/^Published Time:\s*(.+)$/mi)?.[1];
+      const publishedDate = publishedAt ? new Date(publishedAt) : new Date();
+      this.lastUpdated = Number.isNaN(publishedDate.getTime())
+        ? new Date().toISOString()
+        : publishedDate.toISOString();
+      try {
+        localStorage.setItem(STORAGE_KEY_RATE, this.rate.toString());
+        localStorage.setItem(STORAGE_KEY_DATE, this.lastUpdated);
+      } catch (e) {}
+      console.log(`[BCV API] Tasa oficial actualizada exitosamente: Bs. ${this.rate}`);
     } catch (err) {
       console.warn('[BCV API] No se pudo obtener la tasa en vivo, usando tasa guardada:', err.message);
       this.error = err.message;
     } finally {
+      clearTimeout(timeoutId);
       this.isFetching = false;
       this.notify();
     }
