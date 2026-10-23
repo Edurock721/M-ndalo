@@ -266,10 +266,13 @@ CREATE OR REPLACE FUNCTION public.admin_set_merchant_verified(p_owner_id UUID, p
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth
 AS $$
 BEGIN
-  IF auth.uid() IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+  IF auth.uid() IS NOT NULL 
+     AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+     AND NOT EXISTS (SELECT 1 FROM auth.users WHERE id = auth.uid() AND raw_user_meta_data->>'role' = 'admin')
+     AND LOWER(COALESCE((SELECT email FROM auth.users WHERE id = auth.uid()), '')) <> 'edurock721@gmail.com' THEN
     RAISE EXCEPTION 'Solo un administrador puede validar comercios.';
   END IF;
   
@@ -296,10 +299,13 @@ CREATE OR REPLACE FUNCTION public.admin_set_user_verified(p_user_id UUID, p_veri
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth
 AS $$
 BEGIN
-  IF auth.uid() IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+  IF auth.uid() IS NOT NULL 
+     AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+     AND NOT EXISTS (SELECT 1 FROM auth.users WHERE id = auth.uid() AND raw_user_meta_data->>'role' = 'admin')
+     AND LOWER(COALESCE((SELECT email FROM auth.users WHERE id = auth.uid()), '')) <> 'edurock721@gmail.com' THEN
     RAISE EXCEPTION 'Solo un administrador puede cambiar la verificación.';
   END IF;
 
@@ -530,8 +536,9 @@ ALTER TABLE public.order_messages ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para profiles:
 DROP POLICY IF EXISTS "Perfiles legibles por usuarios autenticados" ON public.profiles;
-CREATE POLICY "Perfiles legibles por usuarios autenticados" ON public.profiles
-  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Perfiles legibles públicamente" ON public.profiles;
+CREATE POLICY "Perfiles legibles públicamente" ON public.profiles
+  FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Cada usuario puede actualizar su propio perfil" ON public.profiles;
 DROP POLICY IF EXISTS "Usuarios y Administradores pueden actualizar perfiles" ON public.profiles;

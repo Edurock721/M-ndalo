@@ -273,6 +273,10 @@ export function AdminPortal() {
   const handleToggleVerification = async (userId, newStatus, userName, role) => {
     try {
       await updateUserVerification(userId, newStatus, role);
+      setStoreState({
+        profiles: [...localStore.profiles],
+        merchants: [...localStore.merchants]
+      });
       showNotification(
         newStatus 
           ? `✓ Se ha aprobado y activado a "${userName}"` 

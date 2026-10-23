@@ -429,11 +429,13 @@ class LocalStore {
         }
       }
       this.saveToStorage();
+      this.notify();
       return;
     }
 
     this.profiles.unshift({ id: userId, ...updates, updated_at: new Date().toISOString() });
     this.saveToStorage();
+    this.notify();
   }
 
   markDeleted(id) {

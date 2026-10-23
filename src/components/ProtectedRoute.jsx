@@ -13,6 +13,18 @@ export function ProtectedRoute({ allowedRoles = [], children }) {
   const location = useLocation();
   const [checking, setChecking] = useState(false);
 
+  const currentRole = profile?.role || user?.user_metadata?.role || 'client';
+  const isVerified = profile?.is_verified ?? (currentRole === 'client');
+
+  // Auto-comprobar aprobación cada 3.5 segundos en segundo plano mientras esté en revisión
+  React.useEffect(() => {
+    if (loading || isVerified || !user?.id) return;
+    const interval = setInterval(() => {
+      refreshProfile();
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [loading, isVerified, user?.id]);
+
   // 1. Estado de carga inicial
   if (loading) {
     return (
@@ -34,10 +46,6 @@ export function ProtectedRoute({ allowedRoles = [], children }) {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  // Si aún no ha cargado el perfil de la base de datos (trigger en proceso)
-  const currentRole = profile?.role || user.user_metadata?.role || 'client';
-  const isVerified = profile?.is_verified ?? (currentRole === 'client');
 
   // 3. Pantalla de Cuenta en Revisión para Conductor o Comercio no verificado
   if (!isVerified && (currentRole === 'rider' || currentRole === 'merchant')) {
