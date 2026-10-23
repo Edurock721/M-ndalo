@@ -231,7 +231,7 @@ export function Navbar({
                 border: '1px solid rgba(255,255,255,0.2)'
               }}
             >
-              <ShoppingCart size={16} />
+              <ShoppingCart size={20} strokeWidth={2.5} />
               <span>Carrito</span>
               {cartCount > 0 && (
                 <span style={{

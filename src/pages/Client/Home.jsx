@@ -6,7 +6,7 @@ import { ClientView } from '../../components/ClientView';
 import { CartModal } from '../../components/CartModal';
 import { ContextualChatModal } from '../../components/ContextualChatModal';
 import { 
-  ShoppingBag, 
+  ShoppingCart, 
   Package, 
   Car, 
   Wallet, 
@@ -151,16 +151,16 @@ export function Home() {
               </span>
             </div>
 
-            {/* Carrito flotante en header con contador pulsante */}
+            {/* Botón Carrito Prominente y Fácil de Identificar en Móvil y PC */}
             <button
               onClick={() => setShowCartModal(true)}
-              className="relative p-2 sm:p-2.5 rounded-xl bg-orange-500/15 border border-orange-500/35 text-orange-400 hover:bg-orange-500/25 transition-all cursor-pointer flex items-center gap-1.5"
+              className="relative px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white shadow-lg shadow-orange-500/35 hover:shadow-orange-500/50 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
               title="Ver Carrito de Compras"
             >
-              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline text-xs font-extrabold text-orange-400">Carrito</span>
+              <ShoppingCart className="w-5 h-5 flex-shrink-0 text-white" strokeWidth={2.4} />
+              <span className="text-xs font-black text-white tracking-tight">Carrito</span>
               {totalCartItems > 0 && (
-                <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center animate-pulse ml-0.5">
+                <span className="px-1.5 py-0.5 rounded-full bg-white text-orange-600 text-[11px] font-black flex items-center justify-center shadow-md animate-pulse ml-0.5 min-w-[18px]">
                   {totalCartItems}
                 </span>
               )}
@@ -229,6 +229,34 @@ export function Home() {
           exchangeRate={currentRate}
         />
       </div>
+
+      {/* Botón Flotante Inferior de Carrito para Móvil cuando hay productos */}
+      {totalCartItems > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden animate-slide-up">
+          <button
+            onClick={() => setShowCartModal(true)}
+            className="w-full h-14 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white font-black text-sm flex items-center justify-between px-4 shadow-2xl shadow-orange-500/60 border border-white/30 active:scale-98 transition-all cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white text-orange-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                <ShoppingCart size={20} strokeWidth={2.5} />
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-black leading-tight text-white">Ver Carrito</span>
+                <span className="block text-[11px] text-orange-100 font-medium">
+                  {totalCartItems} {totalCartItems === 1 ? 'producto agregado' : 'productos agregados'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-black font-mono text-white">
+                ${cart.reduce((acc, it) => acc + it.price * it.quantity, 0).toFixed(2)}
+              </span>
+              <span className="text-xs bg-white/25 px-2.5 py-1 rounded-lg font-bold">Pagar →</span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Modales */}
       {showCartModal && (
